@@ -23,6 +23,7 @@ const CHAVE_COPIA = 'servicos-painel-catalogo';
 const CHAVE_PAGINAS = 'servicos-painel-paginas';
 const CHAVE_FILTROS = 'servicos-painel-filtros';
 const CHAVE_BLOCOS = 'servicos-painel-blocos';
+const CHAVE_SRV_PGT = 'servicos-painel-servicos-pgt';
 
 const TRILHOS = [
   ['cliente', 'Cliente final', 'Cliente'],
@@ -116,6 +117,16 @@ async function gravarCatalogo(produtos, mensagemOk) {
   }
 }
 
+// Serviços do Plano Geral de Trabalho (Universo), para ligar cada produto a um serviço (20/11/2026)
+let servicosPgt = ler(CHAVE_SRV_PGT, []);
+async function carregarServicosPgt() {
+  try {
+    const d = await api('/api/admin/servicos-pgt');
+    servicosPgt = d.servicos || [];
+    guardar(CHAVE_SRV_PGT, servicosPgt);
+  } catch { /* fica a cópia (ou só o valor gravado) */ }
+}
+
 async function carregarPaginas() {
   try {
     const d = await api('/api/admin/paginas');
@@ -163,7 +174,7 @@ async function entrar(s, silencioso) {
   const copia = ler(CHAVE_COPIA, null);
   if (silencioso && copia) { catalogo = copia; mostrarPainel(); }
   try {
-    const [c] = await Promise.all([api('/api/admin/catalogo'), carregarPaginas()]);
+    const [c] = await Promise.all([api('/api/admin/catalogo'), carregarPaginas(), carregarServicosPgt()]);
     catalogo = c;
     guardar(CHAVE_SENHA, s);
     guardar(CHAVE_COPIA, catalogo);
@@ -490,7 +501,16 @@ const porCaminho = (c, v) => { const { obj, chave } = alvo(c); if (obj) obj[chav
 
 // ================================================================ SUBPÁGINA DO PRODUTO
 
-const vazio = () => ({ id: '', nome: '', trilho: filtros.trilho !== 'todos' ? filtros.trilho : 'cliente', degrau: 'contrato', situacao: 'a-desenvolver', noSite: true,
+function opcoesServicoPgt(v) {
+  const grupo = (d, rot) => {
+    const l = servicosPgt.filter((x) => (x.dinamica || 'fluxo') === d);
+    return l.length ? `<optgroup label="${rot}">${l.map((x) => `<option value="${esc(x.id)}" ${v === x.id ? 'selected' : ''}>${esc(x.sigla + ' · ' + x.nome)}</option>`).join('')}</optgroup>` : '';
+  };
+  const conhecido = servicosPgt.some((x) => x.id === v);
+  return `<option value="">Nenhum</option>${v && !conhecido ? `<option value="${esc(v)}" selected>${esc(v)}</option>` : ''}${grupo('fluxo', 'Em fluxo')}${grupo('ilha', 'Em ilha')}`;
+}
+
+const vazio = () => ({ id: '', nome: '', trilho: filtros.trilho !== 'todos' ? filtros.trilho : 'cliente', degrau: 'contrato', situacao: 'a-desenvolver', noSite: true, servicoPgt: '',
   publico: { titulo: '', texto: '', chamada: '', link: '', imagem: null }, notas: '' });
 
 function cabecalhoProduto(p, aba) {
@@ -528,6 +548,8 @@ function desenharFicha() {
       `<button type="button" role="radio" data-v="${id}" aria-checked="${p.situacao === id}">${esc(n)}</button>`).join('')}</div></div>
     <label class="u-campo"><span>Trilho</span><select data-c="pr.trilho">${opc(TRILHOS, p.trilho)}</select></label>
     <label class="u-campo"><span>Degrau</span><select data-c="pr.degrau">${opc(DEGRAUS, p.degrau)}</select></label>
+    <label class="u-campo largo"><span>Serviço do PGT</span><select data-c="pr.servicoPgt">${opcoesServicoPgt(p.servicoPgt)}</select>
+      <small>${servicosPgt.length ? 'O serviço do Plano Geral de Trabalho a que este produto se liga (vários produtos podem apontar para o mesmo).' : 'A lista dos serviços vem do Universo e ainda não chegou: o valor gravado fica.'}</small></label>
     <label class="chave largo"><input type="checkbox" data-c="pr.noSite" ${p.noSite ? 'checked' : ''}> Aparece no grid do site quando estiver no ar</label>
     ${ed.novo ? '' : `<div class="dica largo">Código <span class="etq codigo">${esc(p.id)}</span></div>`}`;
 

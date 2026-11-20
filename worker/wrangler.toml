@@ -14,3 +14,10 @@ kv_namespaces = [
 [vars]
 # repositório onde o Worker cria a casca das landing pages novas (com o secret SERVICOS_GITHUB_TOKEN)
 GITHUB_REPO = "cidclementino/servicos-odisse"
+
+# Ligação com o Universo (20/11/2026): só a lista dos serviços do PGT (rota bases/lista), para ligar cada produto
+# do catálogo a um serviço. Publicar o universo-hub antes (ele precisa do ponto de entrada Servicos).
+[[services]]
+binding = "UNIVERSO"
+service = "universo-hub"
+entrypoint = "Servicos"

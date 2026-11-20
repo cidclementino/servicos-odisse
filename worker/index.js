@@ -20,7 +20,9 @@
 // existiam (residencial, interiores, inicio) nascem de _data/paginas/*.json até a primeira publicação pelo painel.
 //
 // Produto:
-//   { id, nome, trilho, degrau, situacao, noSite, publico: { titulo, texto, chamada, link, imagem }, notas, atualizado }
+//   { id, nome, trilho, degrau, situacao, noSite, servicoPgt, publico: { titulo, texto, chamada, link, imagem }, notas, atualizado }
+//   servicoPgt (20/11): o serviço do Plano Geral de Trabalho a que o produto se liga (srv_…; vários produtos podem
+//   apontar para o mesmo serviço). A lista vem do Universo pela ligação UNIVERSO (ponto de entrada Servicos).
 //   trilho   : cliente | corretores | construtoras | escritorios
 //   degrau   : entrada (grátis) | leve (pago leve) | contrato (serviço principal)
 //   situacao : a-desenvolver | desenvolvimento | no-ar | pausado | arquivado
@@ -41,6 +43,7 @@
 //   PUT  /api/admin/paginas/:id   -> grava o rascunho ({ versao, pagina }); 409 se a versão mudou
 //   POST /api/admin/paginas/:id/publicar -> publica o rascunho ({ versao })
 //   GET  /api/admin/previa/:endereço     -> rascunho, para a prévia no site (?previa)
+//   GET  /api/admin/servicos-pgt         -> serviços do PGT (id, sigla, nome, dinâmica), lidos do Universo
 
 import { limparPagina, limparImagem, limparLink, SLUG, RESERVADOS } from '../assets/lp/blocos.js';
 import SEMENTE_RESIDENCIAL from '../_data/paginas/residencial.json';
@@ -68,6 +71,12 @@ export const SITUACOES = ['a-desenvolver', 'desenvolvimento', 'no-ar', 'pausado'
 // primeiro catálogo (quando o KV está vazio): o que já está no ar no servicos e o que saiu da conversa de 20/11/2026
 const p = (id, nome, trilho, degrau, situacao, noSite, publico, notas = '') =>
   ({ id, nome, trilho, degrau, situacao, noSite, publico: { titulo: '', texto: '', chamada: '', link: '', imagem: null, ...publico }, notas });
+// produto do catálogo → serviço do PGT (os que já existiam no Universo em 20/11/2026)
+export const SERVICO_PGT = {
+  'projeto-residencial': 'srv_ne', 'projeto-interiores': 'srv_in', 'estudo-viabilidade': 'srv_ev', 'planejador-obra': 'srv_po',
+  'sessao-projeto': 'srv_sp', 'avaliacao-compra': 'srv_av', 'ficha-terreno': 'srv_ft', 'dossie-construtoras': 'srv_do',
+  'personalizacao-unidades': 'srv_pu', 'consultoria-computacional': 'srv_cc',
+};
 export const SEMENTE = [
   p('projeto-residencial', 'Projeto residencial', 'cliente', 'contrato', 'no-ar', true,
     { titulo: 'Projeto Residencial', texto: 'Um espaço que responde a como você vive — não a um modelo pronto.', chamada: 'Ver projeto', link: '/residencial/', imagem: { caminho: '/inicio/images/capa-residencial.jpg' } }),
@@ -133,6 +142,8 @@ export function limparProduto(x) {
     degrau: umDe(x.degrau, DEGRAUS, 'contrato'),
     situacao: umDe(x.situacao, SITUACOES, 'a-desenvolver'),
     noSite: x.noSite !== false,
+    servicoPgt: typeof x.servicoPgt === 'string' && /^srv_[A-Za-z0-9_]{1,40}$/.test(x.servicoPgt) ? x.servicoPgt
+      : x.servicoPgt === undefined ? SERVICO_PGT[x.id] || '' : '',
     publico: {
       titulo: curto(pub.titulo, 120),
       texto: curto(pub.texto, 240),
@@ -147,7 +158,8 @@ export function limparProduto(x) {
 
 async function lerCatalogo(env) {
   const c = await env.SERVICOS.get('catalogo', 'json');
-  if (c && Array.isArray(c.produtos)) return c;
+  // catálogo gravado antes de 20/11/2026: cada produto conhecido ganha o serviço do PGT a que se liga
+  if (c && Array.isArray(c.produtos)) return { ...c, produtos: c.produtos.map((x) => (x.servicoPgt === undefined ? { ...x, servicoPgt: SERVICO_PGT[x.id] || '' } : x)) };
   return { versao: 0, atualizado: '', produtos: SEMENTE.map(limparProduto) };
 }
 
@@ -399,6 +411,14 @@ export default {
           return json(request, await lerCatalogo(env), 200, { 'Cache-Control': 'no-store' });
         }
         if (caminho === '/api/admin/catalogo' && m === 'PUT') return gravarCatalogo(request, env);
+        if (caminho === '/api/admin/servicos-pgt' && m === 'GET') {
+          if (!env.UNIVERSO) return erro(request, 'sem a ligação com o Universo', 503);
+          try {
+            const r = await env.UNIVERSO.fetch('https://universo/api/v1/bases/lista');
+            if (!r.ok) return erro(request, `o Universo respondeu ${r.status}`, 502);
+            return json(request, await r.json(), 200, { 'Cache-Control': 'no-store' });
+          } catch (e) { return erro(request, 'não consegui falar com o Universo', 502); }
+        }
 
         const im = caminho.match(/^\/api\/admin\/imagens\/([^/]+)$/);
         if (im && m === 'PUT') return gravarImagem(request, env, im[1]);
