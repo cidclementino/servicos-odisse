@@ -1,0 +1,343 @@
+{
+ "slug": "interiores",
+ "titulo": "Odisse Arquitetos — Projeto de Interiores e Ambientação",
+ "descricao": "Projeto de interiores e ambientação para espaços residenciais e comerciais, com o Odisse, Estúdio de Arquitetura e Design.",
+ "formulario": "/formulario-interiores/",
+ "chamada": "Quero Solicitar um Orçamento",
+ "whatsapp": true,
+ "textoWhatsapp": "Quero Falar no WhatsApp",
+ "blocos": [
+  {
+   "uid": "abe001",
+   "tipo": "abertura",
+   "dados": {
+    "imagem": {
+     "caminho": "/interiores/images/hero-interiores-003.jpg"
+    },
+    "titulo": "Projeto de Interiores para revelar todo o potencial do seu espaço.",
+    "texto": "Criamos ambientes residenciais e comerciais onde layout, iluminação e mobiliário são pensados como um conjunto, com rigor técnico e sensibilidade artística. Para que o espaço reflita as pessoas que o habitam ou a marca que representa.",
+    "prova": [
+     {
+      "valor": "+100.000 m²",
+      "complemento": "projetados"
+     },
+     {
+      "valor": "+50 projetos",
+      "complemento": ""
+     },
+     {
+      "valor": "5 anos",
+      "complemento": "de atuação"
+     }
+    ],
+    "nota": "Resposta em até 1 dia útil."
+   }
+  },
+  {
+   "uid": "dua001",
+   "tipo": "duas-colunas",
+   "dados": {
+    "rotulo": "",
+    "titulo": "Um espaço que precisa de mudanças — transformado do seu jeito.",
+    "colunas": [
+     {
+      "titulo": "Residencial",
+      "texto": "Um apartamento recém-comprado, ainda vazio. Ou a casa onde você já mora, mas que parou de fazer sentido — móveis que não conversam entre si, cômodos bem localizados, mas mal aproveitados. De um jeito ou de outro, falta um projeto que dê forma ao que esse espaço pode ser."
+     },
+     {
+      "titulo": "Comercial",
+      "texto": "Um espaço comercial recém-alugado, ainda uma folha em branco. Ou um ambiente que já funciona, mas não comunica a marca — um layout que atrapalha o fluxo do dia a dia, uma experiência que podia render mais. De um jeito ou de outro, falta um projeto que traduza o negócio em espaço."
+     }
+    ],
+    "botoes": true
+   }
+  },
+  {
+   "uid": "ant001",
+   "tipo": "antes-depois",
+   "dados": {
+    "rotulo": "Transformações",
+    "titulo": "Transformações recentes",
+    "texto": "Dois espaços, o mesmo processo: ler o que já existe antes de propor o que virá.",
+    "pares": [
+     {
+      "nome": "Reformulação de Interiores do Apartamento 2503",
+      "antes": {
+       "caminho": "/interiores/images/Apto2503-Antes-001.jpg"
+      },
+      "depois": {
+       "caminho": "/interiores/images/Apto2503-Depois-001.jpg"
+      }
+     },
+     {
+      "nome": "Reformulação de Interiores da Sede Administrativa NVG",
+      "antes": {
+       "caminho": "/interiores/images/navegantes-antes-001.jpg"
+      },
+      "depois": {
+       "caminho": "/interiores/images/navegantes-depois-001.jpg"
+      }
+     }
+    ],
+    "botoes": false
+   }
+  },
+  {
+   "uid": "ite001",
+   "tipo": "itens-numerados",
+   "dados": {
+    "rotulo": "O diferencial",
+    "titulo": "Cada espaço, um projeto próprio",
+    "texto": "Não aplicamos um estilo pronto sobre um espaço que já existe. Cada ambiente nasce da leitura de como você já vive ali, do que funciona e do que precisa mudar — e vira um projeto com identidade própria, não uma decoração genérica.",
+    "itens": [
+     {
+      "titulo": "Rigor técnico",
+      "texto": "Projeto executivo completo — layout, marcenaria, iluminação — para você orçar com segurança e chegar à obra sem imprevistos de última hora."
+     },
+     {
+      "titulo": "Leitura de contexto",
+      "texto": "O espaço como ele é hoje, o seu uso real e o que você quer que ele se torne — analisados antes de qualquer traço, para que o projeto funcione desde o primeiro dia."
+     },
+     {
+      "titulo": "Sensibilidade artística",
+      "texto": "Mais do que resolver um layout: um ambiente que expressa quem mora ou trabalha nele."
+     }
+    ],
+    "botoes": true
+   }
+  },
+  {
+   "uid": "pro001",
+   "tipo": "projetos",
+   "dados": {
+    "rotulo": "Projetos",
+    "titulo": "Espaços que já ganharam nova forma",
+    "texto": "Uma seleção de projetos de interiores que já entregamos.",
+    "projetos": [
+     {
+      "imagem": {
+       "caminho": "/interiores/images/Residência-DCMCC-003.jpg"
+      },
+      "nome": "Interiores da Residência DCMCC",
+      "local": "João Pessoa, PB",
+      "area": "1.110 m²",
+      "tipo": "Residencial",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/interiores/images/escritorio-fiep-002.jpg"
+      },
+      "nome": "Renovação de Interiores para Sede de Federação na Paraíba",
+      "local": "Campina Grande, PB",
+      "area": "220 m²",
+      "tipo": "Comercial",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/interiores/images/escritório-VRV-001.jpg"
+      },
+      "nome": "Interiores da Sede Administrativa da VRV",
+      "local": "João Pessoa, PB",
+      "area": "125 m²",
+      "tipo": "Comercial",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/interiores/images/Apartamento-LVJS-001.jpg"
+      },
+      "nome": "Interiores do Apartamento LVJS",
+      "local": "João Pessoa, PB",
+      "area": "125 m²",
+      "tipo": "Residencial",
+      "sintese": ""
+     }
+    ],
+    "chamada": "Quero Solicitar um Orçamento",
+    "botoes": true
+   }
+  },
+  {
+   "uid": "ite002",
+   "tipo": "itens-numerados",
+   "dados": {
+    "rotulo": "Como trabalhamos",
+    "titulo": "Do diagnóstico à entrega, em quatro passos.",
+    "texto": "Cada projeto passa por um processo com começo, meio e entrega definidos. Você aprova cada etapa antes de avançarmos para a próxima — sem surpresas no caminho.",
+    "itens": [
+     {
+      "titulo": "Diagnóstico",
+      "texto": "Visita técnica ao espaço, levantamento métrico e entendimento de como você usa cada ambiente hoje."
+     },
+     {
+      "titulo": "Conceito",
+      "texto": "Estudo de layout, referências e paleta — você já visualiza a proposta antes de qualquer execução."
+     },
+     {
+      "titulo": "Projeto Executivo",
+      "texto": "Marcenaria, iluminação, especificação de mobiliário e acabamentos — detalhado e pronto para orçar e executar."
+     },
+     {
+      "titulo": "Acompanhamento",
+      "texto": "Suporte técnico durante a execução e instalação, até a entrega final do ambiente."
+     }
+    ],
+    "botoes": false
+   }
+  },
+  {
+   "uid": "esc001",
+   "tipo": "escopo",
+   "dados": {
+    "rotulo": "Escopo",
+    "titulo": "O que você recebe",
+    "texto": "Um serviço completo, sem lacunas entre o projeto e a instalação:",
+    "itens": [
+     "Projeto de layout e ambientação completo",
+     "Especificação de mobiliário, iluminação e acabamentos",
+     "Projeto de marcenaria sob medida",
+     "Compatibilização com reforma, quando houver (elétrica, hidráulica, forro)",
+     "Suporte técnico até a entrega do ambiente"
+    ],
+    "imagem": {
+     "caminho": "/interiores/images/pranchas-cozinha-001.jpg"
+    },
+    "botoes": true
+   }
+  },
+  {
+   "uid": "tex001",
+   "tipo": "texto-imagens",
+   "dados": {
+    "rotulo": "Do papel ao ambiente pronto",
+    "titulo": "Acompanhamos até o último detalhe ser instalado",
+    "texto": "Um projeto de interiores não termina na entrega do desenho. Continuamos presentes durante a execução da marcenaria e a instalação de mobiliário e iluminação, esclarecendo dúvidas e acompanhando de perto, para que o ambiente entregue seja exatamente o que foi projetado.",
+    "imagens": [
+     {
+      "imagem": {
+       "caminho": "/interiores/images/acompanhamento-01-esquadria.jpg"
+      },
+      "legenda": "Acompanhamento de instalação de esquadrias"
+     },
+     {
+      "imagem": {
+       "caminho": "/interiores/images/acompanhamento-02-eletrica.jpg"
+      },
+      "legenda": "Acompanhamento de instalação de infraestrutura elétrica em cozinha"
+     }
+    ],
+    "botoes": false
+   }
+  },
+  {
+   "uid": "per001",
+   "tipo": "perguntas",
+   "dados": {
+    "rotulo": "Dúvidas frequentes",
+    "titulo": "Perguntas antes de começar",
+    "texto": "Se ficou alguma dúvida sobre como funciona, respondemos as mais comuns abaixo. Para outras dúvidas que não tenham sido respondidas, é só chamar no WhatsApp.",
+    "perguntas": [
+     {
+      "pergunta": "Quanto custa um projeto de interiores?",
+      "resposta": "O valor varia conforme a metragem do espaço, a quantidade de ambientes e o nível de detalhamento (só layout e especificação, ou também marcenaria sob medida). Fazemos um orçamento personalizado a partir de uma conversa inicial sobre o seu espaço e o que você tem em mente — sem custo nessa etapa.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Vale a pena investir em um projeto, ou dá pra economizar decidindo por conta própria?",
+      "resposta": "Um sofá em tamanho errado, um revestimento que não combina com o resto ou uma marcenaria que precisa ser refeita costumam custar mais do que o projeto em si — sem contar o tempo perdido. O projeto existe pra evitar esse tipo de decisão às cegas antes que ela vire obra.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Quanto tempo leva um projeto de interiores, do diagnóstico à entrega?",
+      "resposta": "Cada projeto tem um cronograma próprio, definido conforme a metragem e a complexidade. O que garantimos é um processo com etapas claras — Diagnóstico, Conceito, Projeto Executivo e Acompanhamento — sem surpresas de prazo pelo caminho. Detalhamos o cronograma específico já na proposta.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "O Odisse atende só em João Pessoa, ou projetos em outras cidades também?",
+      "resposta": "Atendemos projetos de interiores em todo o Brasil. O processo — diagnóstico, conceito e detalhamento executivo — funciona remotamente com a mesma qualidade e proximidade, independente de onde o espaço esteja. A única etapa com abrangência específica é a visita técnica presencial.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Serve pra um espaço que só precisa de mobiliário e decoração, ou também pra reforma?",
+      "resposta": "Serve para os dois casos. Se o seu espaço só precisa de um novo layout, mobiliário e iluminação, entregamos o projeto de ambientação completo. Se envolve também mudanças estruturais ou de instalações, compatibilizamos o projeto de interiores com a reforma necessária.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "O projeto já inclui a escolha de mobiliário e iluminação?",
+      "resposta": "Sim. A especificação de mobiliário, iluminação e acabamentos faz parte do escopo do Projeto Executivo — você recebe um documento pronto para orçar e comprar, não só um desenho de referência.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Vocês só fazem o projeto, ou acompanham a marcenaria e a instalação também?",
+      "resposta": "Acompanhamos. Depois da entrega do Projeto Executivo, seguimos com suporte técnico durante a execução da marcenaria e a instalação de mobiliário e iluminação — para garantir que o ambiente entregue seja exatamente o que foi desenhado.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Quem vai conduzir o meu projeto?",
+      "resposta": "Cid Clementino e Nathalia Linhares acompanham pessoalmente cada projeto de interiores, do primeiro traço à entrega do ambiente — não é repassado para uma equipe terceirizada no meio do caminho.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Preencher o formulário já é um compromisso, ou posso só entender melhor como funciona?",
+      "resposta": "Não. É só um primeiro contato. A partir das suas respostas, entendemos sua demanda e retornamos o contato por ligação, WhatsApp ou e-mail — você escolhe a forma que preferir no formulário — e, se fizer sentido para todos, seguimos para uma proposta.",
+      "link": "",
+      "botao": ""
+     }
+    ]
+   }
+  },
+  {
+   "uid": "aut001",
+   "tipo": "autoria",
+   "dados": {
+    "imagem": {
+     "caminho": "/interiores/images/odisse-arquitetos-003.jpg"
+    },
+    "rotulo": "Autoria",
+    "titulo": "Os Arquitetos",
+    "texto": "Cid Clementino e Nathalia Linhares conduzem pessoalmente cada projeto de interiores, do primeiro traço à entrega do ambiente. Ambos são arquitetos e urbanistas formados pela Universidade Federal da Paraíba e coordenam o Odisse, Estúdio de Arquitetura e Design (CAU PJ 670011). Juntos, já assinaram mais de 50 projetos — de reformas e ambientações a residências e edifícios institucionais, como a sede administrativa da VRV. Cid é coordenador criativo do estúdio, com experiência em consultoria arquitetônica para incorporadoras; Nathalia é coordenadora executiva, com passagem pela gestão de projeto e obra em reformas de condomínios residenciais verticais. Em 2023, o Odisse participou da CASACOR Paraíba, onde recebeu o prêmio de Melhor Uso de Materiais Inovadores e foi finalista do Prêmio Salão Design.",
+    "nomes": "CID CLEMENTINO · NATHALIA LINHARES"
+   }
+  },
+  {
+   "uid": "num001",
+   "tipo": "numeros",
+   "dados": {
+    "itens": [
+     {
+      "valor": "+100.000 m²",
+      "legenda": "de arquitetura projetada"
+     },
+     {
+      "valor": "+50 projetos",
+      "legenda": "entregues"
+     },
+     {
+      "valor": "5 anos",
+      "legenda": "de atuação contínua"
+     }
+    ]
+   }
+  },
+  {
+   "uid": "cha001",
+   "tipo": "chamada-final",
+   "dados": {
+    "rotulo": "Comece agora",
+    "titulo": "Vamos repensar seu espaço?",
+    "texto": "Preencha o formulário com informações sobre o seu ambiente e retornaremos o contato em até 1 dia útil.",
+    "chamada": "Quero Solicitar um Orçamento"
+   }
+  }
+ ]
+}

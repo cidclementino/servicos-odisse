@@ -1,0 +1,265 @@
+/* Odisse · Biblioteca de blocos das landing pages — o desenho raiz.
+   Todas as páginas do servicos.odisse.com.br (inicio, residencial, interiores e as que o painel montar)
+   usam só este arquivo + a Marca (marca.css: paleta, Inter). Mudou aqui, mudaram todas.
+
+   Marca (odisse.json): núcleo Arquitetos = fundo papel, painel areia, véu ardósia, selo Roda.
+   Tinta de tudo = ardósia. Ocre só em números e títulos grandes (e marcadores).
+   A estrutura da tela é a das páginas de 11/2026: primeira tela inteira (barra + abertura), seções
+   separadas por filete, e a faixa escura (autoria, números, chamada final) emendada no rodapé. */
+
+:root {
+  --lp-papel: var(--odisse-papel, #FAFAF7);
+  --lp-tinta: var(--odisse-ardosia, #3F4B57);
+  --lp-tinta-2: rgba(63, 75, 87, .74);
+  --lp-escuro: var(--odisse-ardosia, #3F4B57);
+  --lp-areia: var(--odisse-areia, #E3D9C6);
+  --lp-areia-forte: #D5C8AE;   /* areia sob o mouse (areia com 6% de ardósia) */
+  --lp-ocre: var(--odisse-ocre, #BB8248);
+  --lp-nevoa: var(--odisse-nevoa, #E6E8EB);
+  --lp-linha: rgba(63, 75, 87, .14);
+  --lp-linha-clara: rgba(250, 250, 247, .16);
+  --lp-sobre-escuro: var(--odisse-papel, #FAFAF7);
+  --lp-fonte: var(--odisse-fonte, 'Inter', system-ui, sans-serif);
+  --lp-margem: 32px;
+  --ponto: 7px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body.lp {
+  background: var(--lp-papel); color: var(--lp-tinta);
+  font-family: var(--lp-fonte); font-size: 16px; line-height: 1.6;
+  font-optical-sizing: auto; -webkit-font-smoothing: antialiased;
+}
+:where(.lp) a { color: inherit; }
+.lp img { display: block; max-width: 100%; }
+.lp :focus-visible { outline: 2px solid var(--lp-tinta); outline-offset: 3px; }
+.lp-carregando { min-height: 100vh; }
+.lp-aviso-previa { position: sticky; top: 0; z-index: 60; padding: 8px 16px; text-align: center; font-size: 12.5px; font-weight: 600;
+  background: rgba(187, 130, 72, .95); color: #fff; }
+
+.lp-moldura { max-width: min(1680px, 94vw); margin: 0 auto; padding: 0 var(--lp-margem); }
+.lp section { padding: 88px 0; }
+.lp-centro { text-align: center; }
+
+.lp-filete { border: 0; border-top: 1px solid var(--lp-linha); margin: 0; }
+.lp-filete.claro { border-top-color: var(--lp-linha-clara); }
+
+/* ---------------------------------------------------------------- primeira tela + barra */
+.lp-tela { min-height: 100vh; min-height: 100svh; display: flex; flex-direction: column; position: relative; }
+.lp-barra { padding: clamp(10px, 1.4vh, 14px) 40px; display: flex; align-items: center; flex-shrink: 0; position: relative; z-index: 3; }
+.lp-marca { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: var(--lp-tinta); }
+.lp-selo { width: 24px; height: 24px; background: currentColor; flex: none;
+  -webkit-mask: url(https://marca.odisse.com.br/selos/roda.svg) center / contain no-repeat; mask: url(https://marca.odisse.com.br/selos/roda.svg) center / contain no-repeat; }
+.lp-logotipo { width: 70px; height: 15px; background: currentColor; flex: none;
+  -webkit-mask: url(https://marca.odisse.com.br/logos/logotipo-odisse.svg) center / contain no-repeat; mask: url(https://marca.odisse.com.br/logos/logotipo-odisse.svg) center / contain no-repeat; }
+.lp-nucleo { font-size: 10.5px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--lp-tinta-2);
+  padding-left: 12px; border-left: 1px solid var(--lp-linha); line-height: 15px; }
+
+/* rótulo, título e texto das seções */
+.lp-rotulo { font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--lp-tinta-2); margin-bottom: 16px; }
+.lp-titulo { font-size: clamp(26px, 2.8vw, 36px); line-height: 1.15; font-weight: 700; letter-spacing: -.022em; max-width: 52%; margin-bottom: 20px; }
+.lp-titulo.largo { max-width: 100%; }
+.lp-texto { font-size: 16px; max-width: 52%; }
+.lp-texto p + p { margin-top: .8em; }
+.lp-centro .lp-titulo, .lp-centro .lp-texto { max-width: 680px; margin-left: auto; margin-right: auto; }
+
+/* ---------------------------------------------------------------- botões */
+.lp-botoes { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; }
+.lp-botoes.centro { justify-content: center; }
+.lp-botoes.fim { margin-top: 56px; }
+.lp-botoes.fim-esq { margin-top: 32px; }
+.lp-botao { display: inline-flex; align-items: center; gap: 10px; padding: 17px 30px; border: 0; border-radius: 8px;
+  font: 650 14px/1.2 var(--lp-fonte); letter-spacing: .005em; text-decoration: none; cursor: pointer;
+  transition: background-color .2s ease, color .2s ease, transform .2s ease; }
+.lp-botao.principal { background: var(--lp-areia); color: var(--lp-tinta); }
+.lp-botao.principal:hover { background: var(--lp-areia-forte); }
+.lp-botao.zap { background: var(--lp-tinta); color: var(--lp-papel); }
+.lp-botao.zap:hover { background: #333D47; }
+.lp-botao svg { width: 18px; height: 18px; flex: none; }
+.lp-botao .seta { transition: transform .2s ease; }
+.lp-botao:hover .seta { transform: translateX(3px); }
+
+/* ---------------------------------------------------------------- abertura (imagem de fundo) */
+.lp-abertura { position: relative; flex: 1; display: flex; align-items: center; min-height: 0; overflow: hidden; padding: 0 !important; }
+.lp-abertura-fundo { position: absolute; inset: 0; background: var(--lp-escuro) center / cover no-repeat; }
+.lp-abertura-fundo.vazia { display: grid; place-items: center; background: rgba(63, 75, 87, .2); }
+.lp-abertura-fundo.vazia span { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: rgba(250, 250, 247, .7); }
+.lp-abertura-veu { position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(90deg, rgba(63, 75, 87, .78) 0%, rgba(63, 75, 87, .55) 45%, rgba(63, 75, 87, .22) 100%); }
+.lp-abertura-conteudo { position: relative; z-index: 2; width: 100%; padding-top: clamp(24px, 5vh, 64px); padding-bottom: clamp(24px, 5vh, 64px); color: var(--lp-sobre-escuro); }
+.lp-traco { width: 56px; height: 2px; background: var(--lp-areia); margin-bottom: clamp(12px, 2vh, 22px); }
+.lp-abertura-titulo { font-size: clamp(30px, 4vw + 1vh, 54px); line-height: 1.08; font-weight: 700; letter-spacing: -.025em; max-width: 680px; margin-bottom: clamp(14px, 2.5vh, 26px); }
+.lp-abertura-texto { font-size: clamp(15px, 1vw + .6vh, 17px); color: rgba(250, 250, 247, .88); max-width: 500px; margin-bottom: clamp(16px, 3vh, 30px); }
+.lp-prova { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 0; font-size: 12.5px; letter-spacing: .04em; font-weight: 550;
+  color: rgba(250, 250, 247, .9); margin-bottom: clamp(18px, 3vh, 34px); }
+.lp-prova b { font-weight: 750; color: var(--lp-papel); }
+.ponto-sep { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--lp-areia); margin: 0 12px; vertical-align: middle; }
+.lp-nota { font-size: 12px; color: rgba(250, 250, 247, .7); margin-top: 14px; }
+
+/* ---------------------------------------------------------------- abertura com serviços (página inicial) */
+.lp-tela.clara .lp-hub { padding: 48px 0 40px; flex-shrink: 0; }
+.lp-hub-cab { max-width: 50%; }
+.lp-hub-titulo { font-size: clamp(28px, 2.8vw, 50px); line-height: 1.08; font-weight: 700; letter-spacing: -.025em; margin-bottom: 18px; }
+.lp-hub-texto { font-size: clamp(14px, .9vw, 16px); color: var(--lp-tinta-2); }
+.lp-hub-cartoes { flex: 1; min-height: 0; display: flex; padding: 0 0 60px !important; }
+.lp-hub-cartoes > .lp-moldura { flex: 1; display: flex; min-height: 0; width: 100%; }
+.lp-grade-servicos { flex: 1; display: grid; grid-template-columns: repeat(var(--colunas, 3), 1fr); gap: clamp(16px, 2vw, 40px); min-height: 0; }
+.lp-grade-servicos:empty { min-height: 40vh; }
+.lp-servico { position: relative; display: block; height: 100%; min-height: 320px; overflow: hidden; text-decoration: none; background: var(--lp-escuro); }
+.lp-servico-fundo { position: absolute; inset: 0; background: center / cover no-repeat; transition: transform .4s ease; }
+.lp-servico:hover .lp-servico-fundo { transform: scale(1.04); }
+.lp-servico-veu { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(63, 75, 87, .08) 0%, rgba(63, 75, 87, .9) 100%); }
+.lp-servico.sem-imagem .lp-servico-veu { background: linear-gradient(180deg, rgba(46, 48, 54, 0) 0%, rgba(46, 48, 54, .3) 100%); }
+.lp-servico-txt { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 28px; color: var(--lp-papel); }
+.lp-servico-txt h3 { font-size: 20px; font-weight: 700; letter-spacing: -.01em; line-height: 1.2; margin-bottom: 10px; }
+.lp-servico-txt p { font-size: 14px; color: rgba(250, 250, 247, .86); max-width: 92%; margin-bottom: 18px; }
+.lp-servico-cta { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--lp-areia); }
+.lp-servico-cta .seta { transition: transform .2s ease; }
+.lp-servico:hover .lp-servico-cta .seta { transform: translateX(3px); }
+/* 5 serviços ou mais: linhas de cartões 4:5 em três colunas */
+.lp-grade-servicos.muitos { grid-template-columns: repeat(3, 1fr); }
+.lp-grade-servicos.muitos .lp-servico { height: auto; aspect-ratio: 4 / 5; }
+.lp-hub-cartoes:has(.muitos) { flex: none; }
+
+/* ---------------------------------------------------------------- fotos, fitas e etiquetas */
+.lp-foto { position: relative; overflow: hidden; background: var(--lp-nevoa); }
+.lp-foto img { width: 100%; height: 100%; object-fit: cover; }
+.lp-foto.vazia { display: grid; place-items: center; border: 1px dashed rgba(63, 75, 87, .4); background: rgba(227, 217, 198, .45); }
+.lp-foto.vazia span { font-size: 11px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--lp-tinta-2); text-align: center; padding: 0 20px; }
+.p32 { aspect-ratio: 3 / 2; } .p169 { aspect-ratio: 16 / 9; } .p34 { aspect-ratio: 3 / 4; } .p11 { aspect-ratio: 1 / 1; } .p31 { aspect-ratio: 3 / 1; }
+.lp-fitas { position: relative; transition: transform .35s ease; }
+.lp-fitas:hover { transform: scale(1.01); }
+.fita { position: absolute; width: 36px; height: 15px; background: var(--lp-tinta); z-index: 5; box-shadow: 0 2px 4px rgba(46, 48, 54, .2); }
+.fita.f1 { top: -7px; left: 14px; } .fita.f2 { top: -7px; right: 14px; } .fita.f3 { bottom: -7px; left: 14px; } .fita.f4 { bottom: -7px; right: 14px; }
+.lp-faixa-escura .fita { background: var(--lp-areia); }
+.lp-etq-foto { position: absolute; top: 12px; left: 12px; z-index: 6; background: rgba(63, 75, 87, .82); color: var(--lp-papel);
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 5px 9px; border-radius: 4px; }
+.lp-legenda { margin-top: 18px; font-size: 13.5px; }
+.lp-legenda b { display: block; font-size: 15px; font-weight: 700; }
+.lp-legenda span { display: block; margin-top: 2px; font-size: 12.5px; color: var(--lp-tinta-2); }
+.lp-legenda p { margin-top: 8px; }
+.lp-legenda-forte { margin-top: 16px; font-size: 14px; font-weight: 700; }
+.lp-legenda-fina { margin-top: 14px; font-size: 13px; color: var(--lp-tinta-2); }
+
+/* ---------------------------------------------------------------- duas colunas */
+.lp-duas { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+.lp-coluna { border-top: 1px solid var(--lp-tinta); padding-top: 20px; font-size: 15px; }
+.lp-coluna h3 { font-size: 15px; font-weight: 700; margin-bottom: 10px; }
+
+/* ---------------------------------------------------------------- antes e depois */
+.lp-comparacoes { margin-top: 56px; display: flex; flex-direction: column; gap: 48px; }
+.lp-comparar { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.lp-comparar-lado { position: relative; }
+.lp-comparar-lado.antes::after { content: '→'; position: absolute; top: 50%; right: -26px; transform: translateY(-50%); font-size: 20px; font-weight: 700; color: var(--lp-ocre); z-index: 2; }
+
+/* ---------------------------------------------------------------- itens numerados */
+.lp-numerados { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; margin-top: 56px; }
+.lp-numerados.c4 { grid-template-columns: repeat(4, 1fr); }
+.lp-numerado { border-top: 1px solid var(--lp-tinta); padding-top: 20px; font-size: 14.5px; }
+.lp-num { display: block; font-size: 28px; font-weight: 700; letter-spacing: -.01em; color: var(--lp-ocre); margin-bottom: 10px; }
+.lp-numerado h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+
+/* ---------------------------------------------------------------- projetos */
+.lp-projetos { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 56px; }
+.lp-projeto { position: relative; }
+
+/* ---------------------------------------------------------------- escopo */
+.lp-escopo { margin-top: 32px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 40px; }
+.lp-escopo-item { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; padding-bottom: 16px; border-bottom: 1px solid var(--lp-linha); }
+.lp-escopo-item i { width: 8px; height: 8px; background: var(--lp-ocre); margin-top: 8px; flex-shrink: 0; }
+.lp-escopo-foto { margin-top: 40px; }
+
+/* ---------------------------------------------------------------- texto ao lado (texto e duas imagens, autoria) */
+.lp-lado-a-lado { display: grid; grid-template-columns: .8fr 1.2fr; gap: 64px; align-items: center; }
+.lp-lado-a-lado .lp-titulo, .lp-lado-a-lado .lp-texto { max-width: 100%; }
+.lp-duas-fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.lp-autoria-foto { order: -1; }
+.lp-nomes { margin-top: 24px; font-size: 13px; letter-spacing: .06em; font-weight: 700; color: var(--lp-tinta-2); }
+
+/* ---------------------------------------------------------------- perguntas */
+.lp-perguntas { margin: 40px auto 0; max-width: 860px; border-top: 1px solid var(--lp-linha); text-align: left; }
+.lp-pergunta { border-bottom: 1px solid var(--lp-linha); }
+.lp-pergunta summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 22px 0; cursor: pointer;
+  font-weight: 700; font-size: 16px; list-style: none; }
+.lp-pergunta summary::-webkit-details-marker { display: none; }
+.lp-pergunta summary::marker { content: ''; }
+.lp-mais { position: relative; width: 18px; height: 18px; flex-shrink: 0; }
+.lp-mais::before, .lp-mais::after { content: ''; position: absolute; background: var(--lp-tinta); transition: transform .2s ease; }
+.lp-mais::before { width: 12px; height: 2px; top: 8px; left: 3px; }
+.lp-mais::after { width: 2px; height: 12px; top: 3px; left: 8px; }
+.lp-pergunta[open] .lp-mais::after { transform: scaleY(0); }
+.lp-resposta { padding: 0 0 24px; max-width: 640px; font-size: 15px; }
+.lp-resposta p + p { margin-top: .7em; }
+.lp-resposta .lp-botao { margin-top: 16px; }
+
+/* ---------------------------------------------------------------- faixa escura (autoria, números, chamada final) */
+.lp-faixa-escura { background: var(--lp-escuro); color: var(--lp-sobre-escuro); }
+.lp-faixa-escura .lp-rotulo { color: var(--lp-areia); }
+.lp-faixa-escura .lp-texto { color: rgba(250, 250, 247, .8); }
+.lp-faixa-escura .lp-nomes { color: rgba(250, 250, 247, .72); }
+.lp-faixa-escura .lp-foto.vazia { background: rgba(250, 250, 247, .06); border-color: rgba(250, 250, 247, .3); }
+.lp-faixa-escura .lp-foto.vazia span { color: rgba(250, 250, 247, .7); }
+.lp-faixa-escura .lp-botao.zap { background: transparent; color: var(--lp-papel); box-shadow: inset 0 0 0 1px rgba(250, 250, 247, .5); }
+.lp-faixa-escura .lp-botao.zap:hover { background: rgba(250, 250, 247, .1); }
+.lp-numeros { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: 40px; text-align: center; background: var(--lp-areia); color: var(--lp-tinta); border-radius: 8px; padding: 52px 40px; }
+.lp-numero b { display: block; font-weight: 700; font-size: clamp(32px, 3.6vw, 44px); letter-spacing: -.02em; line-height: 1.2; }
+.lp-numero span { display: block; font-size: 13px; margin-top: 6px; color: var(--lp-tinta-2); }
+.lp-final .lp-botoes { margin-top: 32px; }
+.lp-final .lp-botao { font-size: 15px; padding: 19px 38px; }
+
+/* ---------------------------------------------------------------- rodapé e botão flutuante */
+.lp-rodape { background: var(--lp-escuro); color: rgba(250, 250, 247, .66); padding: 56px 0 30px; border-top: 1px solid var(--lp-linha-clara); }
+.lp-rodape .lp-moldura { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.lp-lema { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--lp-papel); margin-bottom: 10px; }
+.lp-assinatura { display: block; width: 150px; height: 71px; background: var(--lp-papel);
+  -webkit-mask: url(https://marca.odisse.com.br/logos/odisse-assinatura-vertical.svg) center / contain no-repeat; mask: url(https://marca.odisse.com.br/logos/odisse-assinatura-vertical.svg) center / contain no-repeat; }
+.lp-rodape-cidade { font-size: 12px; margin-top: 6px; }
+.lp-rodape-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; margin-top: 14px; font-size: 12.5px; letter-spacing: .03em; }
+.lp-rodape-links a { color: rgba(250, 250, 247, .78); text-decoration: none; transition: color .2s ease; }
+.lp-rodape-links a:hover { color: var(--lp-areia); }
+.lp-flutuante { position: fixed; bottom: 40px; right: 40px; z-index: 50; display: flex; align-items: center; gap: 9px;
+  background: var(--lp-tinta); color: var(--lp-papel); font: 650 13px/1 var(--lp-fonte); padding: 14px 22px 14px 18px; border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(46, 48, 54, .22), 0 0 0 1px rgba(250, 250, 247, .14); text-decoration: none; transition: background-color .2s ease, transform .2s ease; }
+.lp-flutuante:hover { background: #333D47; transform: translateY(-2px); }
+.lp-flutuante svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+/* ---------------------------------------------------------------- pontos laterais (Marca: três de cada lado, como no site e nos posts) */
+.pontos { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+.ponto { position: absolute; width: var(--ponto); height: var(--ponto); margin: calc(var(--ponto) / -2) 0 0 calc(var(--ponto) / -2); border-radius: 50%;
+  background: var(--lp-tinta); transition: background-color .25s ease; }
+.ponto.claro { background: var(--lp-papel); }
+.ponto.e1, .ponto.e2, .ponto.e3 { left: 16px; }
+.ponto.d1, .ponto.d2, .ponto.d3 { left: calc(100% - 16px); }
+.ponto.e1, .ponto.d1 { top: 26px; }
+.ponto.e2, .ponto.d2 { top: 50%; }
+.ponto.e3, .ponto.d3 { top: calc(100% - 26px); }
+
+/* ---------------------------------------------------------------- telas menores */
+@media (max-width: 860px) {
+  .lp-lado-a-lado { grid-template-columns: 1fr; gap: 40px; }
+  .lp-numerados, .lp-numerados.c4 { grid-template-columns: 1fr; gap: 32px; }
+  .lp-projetos { grid-template-columns: 1fr; }
+  .lp-duas { grid-template-columns: 1fr; gap: 32px; }
+  .lp-comparar { grid-template-columns: 1fr; gap: 20px; }
+  .lp-comparacoes { gap: 36px; }
+  .lp-comparar-lado.antes::after { display: none; }
+  .lp-numeros { grid-template-columns: 1fr; gap: 32px; padding: 36px 24px; }
+  .lp-titulo, .lp-texto, .lp-hub-cab { max-width: 100%; }
+  .lp-escopo { grid-template-columns: 1fr; }
+  .lp-duas-fotos { grid-template-columns: 1fr 1fr; }
+  .lp-moldura { padding: 0 24px; }
+  .lp section { padding: 64px 0; }
+  .lp-barra { padding-left: 24px; padding-right: 24px; }
+  .lp-abertura-veu { background: rgba(63, 75, 87, .62); }
+  .lp-botoes { flex-direction: column; align-items: stretch; }
+  .lp-botoes .lp-botao { justify-content: center; }
+  .lp-hub-cartoes { display: block; padding: 0 0 64px !important; }
+  .lp-hub-cartoes > .lp-moldura { display: block; }
+  .lp-grade-servicos, .lp-grade-servicos.muitos { grid-template-columns: 1fr; }
+  .lp-servico { height: auto; aspect-ratio: 1 / 1; min-height: 0; }
+  .pontos { display: none; }
+}
+@media (max-width: 640px) {
+  .lp-flutuante { bottom: 16px; right: 16px; padding: 12px 16px 12px 14px; }
+}
+@media (prefers-reduced-motion: reduce) { .lp * { transition: none !important; } }

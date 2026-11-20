@@ -8,7 +8,16 @@
 //   catalogo        -> { versao, atualizado, produtos: [produto] } (a ordem da lista é a ordem do grid)
 //   img:<ref>       -> imagem de capa (binário; content-type nos metadados)
 //   ver:<iso>       -> catálogo anterior a cada gravação (as 20 últimas)
-// Secret: SERVICOS_SENHA -> senha do painel (Authorization: Bearer <senha>)
+//   pagina:<id>     -> landing page de um produto (id do produto) ou da página inicial ("inicio"):
+//                      { id, versao, atualizado, publicadoEm, casca, rascunho: pagina, publicado: pagina | null }
+//   lp:<endereço>   -> a página publicada, como o site lê
+// Secrets: SERVICOS_SENHA -> senha do painel (Authorization: Bearer <senha>)
+//          SERVICOS_GITHUB_TOKEN (opcional) -> cria a casca /<endereço>/index.html no repositório quando uma página
+//          nova é publicada; sem ele, a página fica em /lp/?p=<endereço> até a casca ser criada
+//
+// Landing pages: a página guarda só a lista de blocos e os textos; o desenho é o da biblioteca de blocos
+// (assets/lp/blocos.js + blocos.css), a mesma que este Worker usa para limpar o que chega. As páginas que já
+// existiam (residencial, interiores, inicio) nascem de _data/paginas/*.json até a primeira publicação pelo painel.
 //
 // Produto:
 //   { id, nome, trilho, degrau, situacao, noSite, publico: { titulo, texto, chamada, link, imagem }, notas, atualizado }
@@ -20,15 +29,26 @@
 // Rotas públicas
 //   GET  /api/produtos            -> produtos no ar e marcados para o site, na ordem, só os campos públicos
 //   GET  /img/:ref                -> imagem
+//   GET  /api/paginas/:endereço   -> página publicada ({ pagina })
 // Rotas do painel (senha)
 //   GET  /api/admin/catalogo      -> catálogo inteiro
 //   PUT  /api/admin/catalogo      -> grava o catálogo inteiro ({ versao, produtos }); 409 se a versão mudou
 //   PUT  /api/admin/imagens/:ref  -> grava imagem (corpo binário)
 //   GET  /api/admin/versoes       -> versões guardadas (chave, data, quantos produtos)
 //   GET  /api/admin/versao?chave= -> conteúdo de uma versão
+//   GET  /api/admin/paginas       -> resumo das landing pages (endereço, blocos, publicada, mudanças pendentes)
+//   GET  /api/admin/paginas/:id   -> registro da página (rascunho e publicada)
+//   PUT  /api/admin/paginas/:id   -> grava o rascunho ({ versao, pagina }); 409 se a versão mudou
+//   POST /api/admin/paginas/:id/publicar -> publica o rascunho ({ versao })
+//   GET  /api/admin/previa/:endereço     -> rascunho, para a prévia no site (?previa)
+
+import { limparPagina, limparImagem, limparLink, SLUG, RESERVADOS } from '../assets/lp/blocos.js';
+import SEMENTE_RESIDENCIAL from '../_data/paginas/residencial.json';
+import SEMENTE_INTERIORES from '../_data/paginas/interiores.json';
+import SEMENTE_INICIO from '../_data/paginas/inicio.json';
 
 const CORS_BASE = {
-  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, HEAD, PUT, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   'Access-Control-Max-Age': '86400',
   'Vary': 'Origin',
@@ -104,22 +124,6 @@ function autorizado(request, env) {
 const curto = (s, n) => (typeof s === 'string' ? s.trim().slice(0, n) : '');
 const umDe = (v, lista, padrao) => (lista.includes(v) ? v : padrao);
 
-function limparImagem(im) {
-  if (!im || typeof im !== 'object') return null;
-  if (typeof im.ref === 'string' && REF.test(im.ref)) {
-    return { ref: im.ref, w: Number.isFinite(im.w) ? Math.round(im.w) : 0, h: Number.isFinite(im.h) ? Math.round(im.h) : 0 };
-  }
-  if (typeof im.caminho === 'string' && /^\/[a-z0-9/_.-]+\.(jpe?g|png|webp)$/i.test(im.caminho)) return { caminho: im.caminho };
-  return null;
-}
-
-function limparLink(s) {
-  const l = curto(s, 500);
-  if (!l) return '';
-  if (l.startsWith('/') && !l.startsWith('//')) return l;
-  try { const u = new URL(l); return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : ''; } catch { return ''; }
-}
-
 export function limparProduto(x) {
   const pub = x.publico || {};
   return {
@@ -165,6 +169,143 @@ export function publicos(catalogo, base) {
         degrau: x.degrau,
       };
     });
+}
+
+
+// ---------------------------------------------------------------- landing pages
+
+const ID_PAGINA = /^(inicio|[a-z0-9][a-z0-9-]{1,60})$/;
+const MAX_PAGINA = 256 * 1024;
+// páginas que já existiam no site: valem como publicadas até a primeira publicação pelo painel
+export const SEMENTES_PAGINAS = {
+  'projeto-residencial': SEMENTE_RESIDENCIAL,
+  'projeto-interiores': SEMENTE_INTERIORES,
+  inicio: SEMENTE_INICIO,
+};
+const CASCAS_NO_REPO = new Set(['residencial', 'interiores', 'inicio']);
+
+const igual = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// casca = o endereço que já tem /<endereço>/index.html no site
+const temCasca = (r, slug) => CASCAS_NO_REPO.has(slug) || r.casca === slug;
+
+function registroSemente(id) {
+  const sem = SEMENTES_PAGINAS[id];
+  if (!sem) return null;
+  const pg = limparPagina(sem);
+  return { id, versao: 0, atualizado: '', publicadoEm: '', casca: pg.slug, semente: true, rascunho: pg, publicado: pg };
+}
+
+async function lerRegistro(env, id) {
+  const r = await env.SERVICOS.get(`pagina:${id}`, 'json');
+  return r || registroSemente(id);
+}
+
+async function todosRegistros(env) {
+  const lista = [];
+  let cursor;
+  do {
+    const vez = await env.SERVICOS.list({ prefix: 'pagina:', cursor });
+    lista.push(...vez.keys.map((k) => k.name.slice(7)));
+    cursor = vez.list_complete ? null : vez.cursor;
+  } while (cursor);
+  const ids = new Set([...lista, ...Object.keys(SEMENTES_PAGINAS)]);
+  const regs = await Promise.all([...ids].map((id) => lerRegistro(env, id)));
+  return regs.filter(Boolean);
+}
+
+const resumo = (r) => ({
+  id: r.id,
+  slug: r.rascunho.slug,
+  slugPublicado: r.publicado?.slug || '',
+  titulo: r.rascunho.titulo,
+  blocos: r.rascunho.blocos.length,
+  publicadoEm: r.publicadoEm,
+  publicada: !!r.publicado,
+  pendente: !r.publicado || !igual(r.rascunho, r.publicado),
+  casca: temCasca(r, r.rascunho.slug),
+  atualizado: r.atualizado,
+});
+
+async function gravarPagina(request, env, id) {
+  const txt = await request.text();
+  if (txt.length > MAX_PAGINA) return erro(request, 'página grande demais', 413);
+  let corpo;
+  try { corpo = JSON.parse(txt); } catch { return erro(request, 'JSON inválido', 400); }
+  const atual = await lerRegistro(env, id);
+  if (atual && Number(corpo.versao) !== atual.versao) return json(request, { error: 'a página mudou em outro lugar', registro: atual }, 409);
+
+  const pg = limparPagina(corpo.pagina);
+  if (!SLUG.test(pg.slug)) return erro(request, 'endereço inválido: use letras minúsculas, números e hífen', 400);
+  if (RESERVADOS.has(pg.slug) || (pg.slug === 'inicio' && id !== 'inicio')) return erro(request, `o endereço /${pg.slug}/ é reservado`, 400);
+  const outros = (await todosRegistros(env)).filter((r) => r.id !== id);
+  const dono = outros.find((r) => r.rascunho.slug === pg.slug || r.publicado?.slug === pg.slug);
+  if (dono) return erro(request, `o endereço /${pg.slug}/ já é de outra página (${dono.id})`, 400);
+  if (!pg.blocos.length) return erro(request, 'a página precisa de pelo menos um bloco', 400);
+
+  const reg = {
+    id,
+    versao: (atual?.versao || 0) + 1,
+    atualizado: new Date().toISOString(),
+    publicadoEm: atual?.publicadoEm || '',
+    casca: atual?.casca || '',
+    rascunho: pg,
+    publicado: atual?.publicado || null,
+  };
+  await env.SERVICOS.put(`pagina:${id}`, JSON.stringify(reg));
+  return json(request, { registro: reg, resumo: resumo(reg) });
+}
+
+// cria /<endereço>/index.html no repositório (layout "lp"), para a página ter endereço próprio
+async function criarCasca(env, slug) {
+  if (CASCAS_NO_REPO.has(slug)) return { ok: true };
+  const token = env.SERVICOS_GITHUB_TOKEN;
+  if (!token) return { ok: false, motivo: 'sem token' };
+  const repo = env.GITHUB_REPO || 'cidclementino/servicos-odisse';
+  const url = `https://api.github.com/repos/${repo}/contents/${slug}/index.html`;
+  const cab = { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'servicos-odisse', 'X-GitHub-Api-Version': '2022-11-28' };
+  const ja = await fetch(url, { headers: cab });
+  if (ja.ok) return { ok: true };
+  const conteudo = `---\nlayout: lp\npagina: ${slug}\n---\n`;
+  const r = await fetch(url, {
+    method: 'PUT', headers: { ...cab, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: `Casca da landing page /${slug}/ (painel)`, content: btoa(conteudo) }),
+  });
+  return r.ok ? { ok: true } : { ok: false, motivo: `GitHub ${r.status}` };
+}
+
+async function publicarPagina(request, env, id) {
+  let corpo = {};
+  try { corpo = await request.json(); } catch { /* sem corpo */ }
+  const atual = await lerRegistro(env, id);
+  if (!atual) return erro(request, 'página não encontrada', 404);
+  if (Number(corpo.versao) !== atual.versao) return json(request, { error: 'a página mudou em outro lugar', registro: atual }, 409);
+
+  const pg = atual.rascunho;
+  const antigo = atual.publicado?.slug;
+  const reg = { ...atual, semente: undefined, versao: atual.versao + 1, publicado: pg, publicadoEm: new Date().toISOString() };
+  let aviso = '';
+  if (!temCasca(reg, pg.slug)) {
+    const c = await criarCasca(env, pg.slug).catch((e) => ({ ok: false, motivo: e.message }));
+    if (c.ok) reg.casca = pg.slug;
+    if (!c.ok) aviso = `A página está no ar em /lp/?p=${pg.slug}. O endereço /${pg.slug}/ precisa da casca no site (${c.motivo}).`;
+  }
+  await env.SERVICOS.put(`lp:${pg.slug}`, JSON.stringify(pg));
+  if (antigo && antigo !== pg.slug) await env.SERVICOS.delete(`lp:${antigo}`);
+  await env.SERVICOS.put(`pagina:${id}`, JSON.stringify(reg));
+  return json(request, { registro: reg, resumo: resumo(reg), aviso });
+}
+
+async function paginaPublica(env, slug) {
+  const pg = await env.SERVICOS.get(`lp:${slug}`, 'json');
+  if (pg) return pg;
+  // semente: só enquanto a página dela não foi publicada pelo painel
+  for (const id of Object.keys(SEMENTES_PAGINAS)) {
+    const sem = SEMENTES_PAGINAS[id];
+    if (sem.slug !== slug) continue;
+    const reg = await env.SERVICOS.get(`pagina:${id}`, 'json');
+    if (!reg || !reg.publicado) return limparPagina(sem);
+  }
+  return null;
 }
 
 // ---------------------------------------------------------------- rotas
@@ -244,6 +385,11 @@ export default {
       }
       const img = caminho.match(/^\/img\/([^/]+)$/);
       if (img && (m === 'GET' || m === 'HEAD')) return servirImagem(request, env, img[1]);
+      const lp = caminho.match(/^\/api\/paginas\/([a-z0-9-]+)$/);
+      if (lp && (m === 'GET' || m === 'HEAD')) {
+        const pg = await paginaPublica(env, lp[1]);
+        return pg ? json(request, { pagina: pg }, 200, { 'Cache-Control': 'public, max-age=60' }) : erro(request, 'página não encontrada', 404);
+      }
 
       // ---------- painel
       if (caminho.startsWith('/api/admin/')) {
@@ -264,6 +410,25 @@ export default {
             return { chave: k.name, data: k.name.slice(4), versao: c?.versao ?? null, produtos: c?.produtos?.length ?? 0 };
           }));
           return json(request, { versoes: lista.sort((a, b) => b.data.localeCompare(a.data)) });
+        }
+        if (caminho === '/api/admin/paginas' && m === 'GET') {
+          const regs = await todosRegistros(env);
+          return json(request, { paginas: regs.map(resumo) }, 200, { 'Cache-Control': 'no-store' });
+        }
+        const pa = caminho.match(/^\/api\/admin\/paginas\/([a-z0-9-]+)(\/publicar)?$/);
+        if (pa) {
+          if (!ID_PAGINA.test(pa[1])) return erro(request, 'id inválido', 400);
+          if (!pa[2] && m === 'GET') {
+            const r = await lerRegistro(env, pa[1]);
+            return r ? json(request, { registro: r, resumo: resumo(r) }, 200, { 'Cache-Control': 'no-store' }) : erro(request, 'página não encontrada', 404);
+          }
+          if (!pa[2] && m === 'PUT') return gravarPagina(request, env, pa[1]);
+          if (pa[2] && m === 'POST') return publicarPagina(request, env, pa[1]);
+        }
+        const pv = caminho.match(/^\/api\/admin\/previa\/([a-z0-9-]+)$/);
+        if (pv && m === 'GET') {
+          const r = (await todosRegistros(env)).find((x) => x.rascunho.slug === pv[1]);
+          return r ? json(request, { pagina: r.rascunho }, 200, { 'Cache-Control': 'no-store' }) : erro(request, 'página não encontrada', 404);
         }
         if (caminho === '/api/admin/versao' && m === 'GET') {
           const chave = url.searchParams.get('chave') || '';

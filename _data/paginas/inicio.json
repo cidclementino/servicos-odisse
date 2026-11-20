@@ -1,0 +1,91 @@
+{
+ "slug": "inicio",
+ "titulo": "Odisse Arquitetos — Projetos",
+ "descricao": "Os serviços de projeto do Odisse, Estúdio de Arquitetura e Design: residencial, interiores e mais.",
+ "formulario": "",
+ "chamada": "",
+ "whatsapp": true,
+ "textoWhatsapp": "Falar no WhatsApp",
+ "blocos": [
+  {
+   "uid": "abe001",
+   "tipo": "abertura-servicos",
+   "dados": {
+    "titulo": "Escolha o serviço certo pra você.",
+    "texto": "Esta é a porta de entrada dos projetos do Odisse Arquitetos. Escolha abaixo o tipo de projeto mais próximo do seu momento — residencial, reforma ou estudo de viabilidade — pra conhecer como trabalhamos e falar diretamente com a gente."
+   }
+  },
+  {
+   "uid": "per001",
+   "tipo": "perguntas",
+   "dados": {
+    "rotulo": "Ainda com dúvidas?",
+    "titulo": "O que é cada um dos nossos serviços?",
+    "texto": "Se você ainda não sabe qual projeto é o seu, aqui vai um resumo rápido de cada um.",
+    "perguntas": [
+     {
+      "pergunta": "O que é o Projeto Residencial?",
+      "resposta": "É o serviço para quem vai construir do zero ou redesenhar por completo a casa ou apartamento onde vive — da concepção arquitetônica ao acompanhamento da obra, sempre a partir de como você vive, não de um modelo pronto.",
+      "link": "/residencial/",
+      "botao": "Ver Projeto Residencial"
+     },
+     {
+      "pergunta": "O que é o Projeto de Interiores e Ambientação?",
+      "resposta": "É para quem já tem um espaço pronto — casa, apartamento ou ambiente comercial — e quer repensar layout, marcenaria, iluminação e mobiliário, com ou sem reforma envolvida.",
+      "link": "/interiores/",
+      "botao": "Ver Projeto de Interiores"
+     },
+     {
+      "pergunta": "O que é o Estudo de Viabilidade?",
+      "resposta": "É a etapa anterior à decisão de compra ou investimento: analisamos potencial construtivo, restrições legais e viabilidade financeira de um terreno ou imóvel antes de você assumir o compromisso.",
+      "link": "/viabilidade/",
+      "botao": "Ver Estudo de Viabilidade"
+     }
+    ]
+   }
+  },
+  {
+   "uid": "aut001",
+   "tipo": "autoria",
+   "dados": {
+    "imagem": {
+     "caminho": "/inicio/images/odisse-arquitetos-003.jpg"
+    },
+    "rotulo": "Autoria",
+    "titulo": "Os Arquitetos",
+    "texto": "Cid Clementino e Nathalia Linhares conduzem pessoalmente cada projeto, do primeiro traço à entrega da obra. Ambos são arquitetos e urbanistas formados pela Universidade Federal da Paraíba e coordenam o Odisse, Estúdio de Arquitetura e Design (CAU PJ 670011). Juntos, já assinaram mais de 50 projetos — de reformas e ambientações a residências e edifícios institucionais, como a sede administrativa da VRV. Cid é coordenador criativo do estúdio, com experiência em consultoria arquitetônica para incorporadoras; Nathalia é coordenadora executiva, com passagem pela gestão de projeto e obra em reformas de condomínios residenciais verticais. Em 2023, o Odisse participou da CASACOR Paraíba, onde recebeu o prêmio de Melhor Uso de Materiais Inovadores e foi finalista do Prêmio Salão Design.",
+    "nomes": "CID CLEMENTINO · NATHALIA LINHARES"
+   }
+  },
+  {
+   "uid": "num001",
+   "tipo": "numeros",
+   "dados": {
+    "itens": [
+     {
+      "valor": "+100.000 m²",
+      "legenda": "de arquitetura projetada"
+     },
+     {
+      "valor": "+50 projetos",
+      "legenda": "entregues"
+     },
+     {
+      "valor": "5 anos",
+      "legenda": "de atuação contínua"
+     }
+    ]
+   }
+  },
+  {
+   "uid": "cha001",
+   "tipo": "chamada-final",
+   "dados": {
+    "rotulo": "Comece agora",
+    "titulo": "Ainda não sabe qual caminho seguir?",
+    "texto": "Conte um pouco sobre o seu projeto — o que você tem em mãos e o que pretende fazer — e fale diretamente com o Odisse pelo WhatsApp.",
+    "chamada": "Falar no WhatsApp"
+   }
+  }
+ ]
+}

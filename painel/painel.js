@@ -1,11 +1,26 @@
-// Painel do servicos.odisse.com.br — Catálogo de serviços e produtos do Odisse.
-// Lê e grava o catálogo inteiro na API (worker/), com a versão para não sobrescrever mudança feita em outro lugar.
+// Painel do servicos.odisse.com.br — Catálogo de serviços e landing pages do Odisse.
+//
+// Páginas (pelo endereço, #/…):
+//   #/                      Catálogo (Registro). A linha abre a subpágina do produto.
+//   #/novo                  Produto novo (Ficha)
+//   #/produto/<id>          Subpágina do produto, aba Ficha (situação, cartão no site, notas)
+//   #/produto/<id>/pagina   Subpágina do produto, aba Landing page (montador por blocos)
+//   #/inicio                Página inicial do site (mesmo montador)
+//   #/blocos                Biblioteca de blocos (os padrões de que toda landing page é feita)
+//
+// O montador não mexe na página: escolhem-se os blocos da biblioteca (assets/lp/blocos.js) e preenchem-se
+// campos simples. O desenho é sempre o da biblioteca; mudou a biblioteca, mudaram todas as páginas.
 // Abre com a última cópia guardada neste navegador e confere a nuvem por baixo.
+
+import {
+  TIPOS, GRUPOS, tipoDe, CAMPOS_PAGINA, novoBloco, limparPagina, desenharBloco, urlImagem, SLUG, RESERVADOS,
+} from '/assets/lp/blocos.js';
 
 const LOCAL = /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
 const API = LOCAL ? `http://${location.hostname}:8787` : (window.Odisse?.API || 'https://servicos-odisse.reservaprojectbasework.workers.dev');
 const CHAVE_SENHA = 'servicos-painel-senha';
 const CHAVE_COPIA = 'servicos-painel-catalogo';
+const CHAVE_PAGINAS = 'servicos-painel-paginas';
 const CHAVE_FILTROS = 'servicos-painel-filtros';
 const CHAVE_BLOCOS = 'servicos-painel-blocos';
 
@@ -24,26 +39,37 @@ const SITUACOES = [
   ['arquivado', 'Arquivado', ''],
 ];
 const nomeDe = (lista, id) => (lista.find((x) => x[0] === id) || [id, id])[1];
+// blocos sugeridos para uma landing page nova (a ordem das páginas de projeto que já existem)
+const SUGERIDOS = ['abertura', 'itens-numerados', 'projetos', 'escopo', 'perguntas', 'autoria', 'numeros', 'chamada-final'];
 
 // ícones SVG (design.md: nunca caracteres de texto)
+const svg = (d, w = 1.6) => `<svg class="ic" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
 const IC = {
-  cima: '<svg class="ic" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 8.5 7 5l3.5 3.5"/></svg>',
-  baixo: '<svg class="ic" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5 7 9l3.5-3.5"/></svg>',
-  fechar: '<svg class="ic" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/></svg>',
+  cima: svg('<path d="M3.5 8.5 7 5l3.5 3.5"/>'),
+  baixo: svg('<path d="M3.5 5.5 7 9l3.5-3.5"/>'),
+  fechar: svg('<path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/>'),
+  externo: svg('<path d="M8 2.5h3.5V6M11.5 2.5 6.5 7.5M10 8.5v3H2.5V4h3"/>'),
+  ok: svg('<path d="M3 7.2 5.8 10 11 4"/>', 1.8),
 };
 
-const $ = (s) => document.querySelector(s);
+const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const semAcento = (s) => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const ler = (k, padrao) => { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : padrao; } catch { return padrao; } };
 const guardar = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* sem armazenamento */ } };
+const copiar = (p) => JSON.parse(JSON.stringify(p));
+const slugDe = (s) => semAcento(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
+const quando = (iso) => { const d = new Date(iso); return `${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`; };
 
 let senha = '';
-let catalogo = null;           // { versao, atualizado, produtos }
-let filtros = { situacao: 'todos', trilho: 'todos', busca: '', ...ler(CHAVE_FILTROS, {}) };
-filtros.busca = '';
-let aberto = null;             // { original, rascunho, novo }
+let catalogo = null;            // { versao, atualizado, produtos }
+let paginas = ler(CHAVE_PAGINAS, []); // resumo das landing pages [{ id, slug, publicada, pendente, casca, … }]
+let filtros = { situacao: 'todos', trilho: 'todos', ...ler(CHAVE_FILTROS, {}), busca: '' };
+let rota = { nome: 'catalogo' };
+let ed = null;                  // o que está aberto para edição: { tipo: 'produto' | 'pagina', … }
 let gravando = false;
+let hashAtual = location.hash;
+const fechados = ler(CHAVE_BLOCOS, {});
 
 // ---------------------------------------------------------------- API
 
@@ -62,22 +88,19 @@ async function api(caminho, opcoes = {}) {
   return dados;
 }
 
-async function gravar(produtos, mensagemOk) {
+async function gravarCatalogo(produtos, mensagemOk) {
   if (gravando) return false;
   gravando = true;
   try {
-    const novo = await api('/api/admin/catalogo', { method: 'PUT', body: JSON.stringify({ versao: catalogo.versao, produtos }) });
-    catalogo = novo;
+    catalogo = await api('/api/admin/catalogo', { method: 'PUT', body: JSON.stringify({ versao: catalogo.versao, produtos }) });
     guardar(CHAVE_COPIA, catalogo);
-    desenhar();
     if (mensagemOk) avisar(mensagemOk, 'ok');
     return true;
   } catch (e) {
     if (e.status === 409 && e.dados?.catalogo) {
       catalogo = e.dados.catalogo;
       guardar(CHAVE_COPIA, catalogo);
-      desenhar();
-      avisar('O catálogo foi mudado em outro lugar. A lista foi recarregada: confira e faça a mudança de novo.', 'erro');
+      avisar('O catálogo foi mudado em outro lugar e foi recarregado: confira e faça a mudança de novo.', 'erro');
     } else if (e.status === 401) {
       sair('A senha não vale mais. Entre de novo.');
     } else {
@@ -87,6 +110,30 @@ async function gravar(produtos, mensagemOk) {
   } finally {
     gravando = false;
   }
+}
+
+async function carregarPaginas() {
+  try {
+    const d = await api('/api/admin/paginas');
+    paginas = d.paginas;
+    guardar(CHAVE_PAGINAS, paginas);
+  } catch { /* fica a cópia */ }
+}
+const resumoDe = (id) => paginas.find((p) => p.id === id);
+function trocarResumo(r) {
+  paginas = [...paginas.filter((p) => p.id !== r.id), r];
+  guardar(CHAVE_PAGINAS, paginas);
+}
+
+// imagem: reduzida aqui no navegador (WebP) e guardada na API
+async function enviarImagem(arquivo, prefixo, max = 1600) {
+  const { reduzir } = await import('https://universo.odisse.com.br/base/v1/imagens.js');
+  const bmp = await createImageBitmap(arquivo, { imageOrientation: 'from-image' });
+  const m = await reduzir(bmp, max);
+  bmp.close?.();
+  const ref = `${prefixo}-${Date.now().toString(36)}`.replace(/[^a-z0-9_-]/gi, '-').slice(0, 80);
+  await api(`/api/admin/imagens/${ref}`, { method: 'PUT', body: m.blob, headers: { 'Content-Type': m.blob.type } });
+  return { ref, w: m.w, h: m.h };
 }
 
 // ---------------------------------------------------------------- entrada
@@ -100,29 +147,24 @@ function mostrarEntrada(msg) {
   setTimeout(() => $('#senha').focus(), 0);
 }
 
-function mostrarPagina() {
-  document.body.classList.remove('vista-login');
-  $('#entrada').hidden = true;
-  $('#pagina').hidden = false;
-}
-
 function sair(msg) {
   senha = '';
   try { localStorage.removeItem(CHAVE_SENHA); } catch { /* */ }
-  fecharGaveta(true);
+  ed = null; marcarMudanca();
   mostrarEntrada(msg);
 }
 
 async function entrar(s, silencioso) {
   senha = s;
   const copia = ler(CHAVE_COPIA, null);
-  if (silencioso && copia) { catalogo = copia; mostrarPagina(); desenhar(); }
+  if (silencioso && copia) { catalogo = copia; mostrarPainel(); }
   try {
-    catalogo = await api('/api/admin/catalogo');
+    const [c] = await Promise.all([api('/api/admin/catalogo'), carregarPaginas()]);
+    catalogo = c;
     guardar(CHAVE_SENHA, s);
     guardar(CHAVE_COPIA, catalogo);
-    mostrarPagina();
-    desenhar();
+    if ($('#pagina').hidden) mostrarPainel();
+    else if (!sujo()) desenhar();
   } catch (e) {
     if (e.status === 401) return sair(silencioso ? '' : 'Senha incorreta.');
     if (catalogo) avisar('Sem conexão com a API: mostrando a última cópia deste computador.', 'erro');
@@ -130,7 +172,60 @@ async function entrar(s, silencioso) {
   }
 }
 
-// ---------------------------------------------------------------- lista
+function mostrarPainel() {
+  document.body.classList.remove('vista-login');
+  $('#entrada').hidden = true;
+  $('#pagina').hidden = false;
+  lerRota();
+  desenhar();
+}
+
+// ---------------------------------------------------------------- rotas
+
+function lerRota() {
+  const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (p[0] === 'produto' && p[1]) rota = { nome: 'produto', id: decodeURIComponent(p[1]), aba: p[2] === 'pagina' ? 'pagina' : 'ficha' };
+  else if (p[0] === 'novo') rota = { nome: 'produto', id: null, aba: 'ficha' };
+  else if (p[0] === 'inicio') rota = { nome: 'inicio' };
+  else if (p[0] === 'blocos') rota = { nome: 'blocos' };
+  else rota = { nome: 'catalogo' };
+}
+
+addEventListener('hashchange', () => {
+  if (!catalogo) return;
+  if (sujo() && !confirm('Há mudanças não salvas. Sair assim mesmo?')) {
+    history.replaceState(null, '', hashAtual || '#/');
+    return;
+  }
+  hashAtual = location.hash;
+  ed = null;
+  lerRota();
+  desenhar();
+  scrollTo(0, 0);
+});
+
+function desenhar() {
+  if (!catalogo) return;
+  const secao = rota.nome === 'inicio' ? 'inicio' : rota.nome === 'blocos' ? 'blocos' : 'catalogo';
+  document.querySelectorAll('#secoes a').forEach((a) => a.classList.toggle('ativo', a.dataset.secao === secao));
+  if (rota.nome === 'catalogo') desenharCatalogo();
+  else if (rota.nome === 'produto') desenharProduto();
+  else if (rota.nome === 'inicio') desenharInicio();
+  else if (rota.nome === 'blocos') desenharBiblioteca();
+}
+
+let avisoTimer;
+function avisar(msg, tipo = '') {
+  const a = $('#avisoGeral');
+  if (!a) { if (tipo === 'erro') alert(msg); return; }
+  a.className = `aviso ${tipo}`;
+  a.textContent = msg;
+  a.hidden = false;
+  clearTimeout(avisoTimer);
+  if (tipo === 'ok') avisoTimer = setTimeout(() => { a.hidden = true; }, 4000);
+}
+
+// ================================================================ CATÁLOGO
 
 function situacaoEtq(id) {
   const s = SITUACOES.find((x) => x[0] === id) || [id, id, ''];
@@ -146,6 +241,13 @@ function noSiteEtq(p) {
   if (!p.publico.titulo || !p.publico.link) return '<span class="etq problema">falta título ou link</span>';
   return '<span class="etq ok">no grid</span>';
 }
+function paginaEtq(id) {
+  const r = resumoDe(id);
+  if (!r) return '<span class="sem">—</span>';
+  if (!r.publicada) return '<span class="etq tracejada">rascunho</span>';
+  if (r.pendente) return '<span class="etq atencao">mudanças</span>';
+  return '<span class="etq ok">publicada</span>';
+}
 
 function visiveis() {
   const b = semAcento(filtros.busca);
@@ -154,6 +256,78 @@ function visiveis() {
     if (filtros.trilho !== 'todos' && p.trilho !== filtros.trilho) return false;
     if (b && !semAcento(`${p.nome} ${p.publico.titulo} ${p.publico.texto} ${p.notas}`).includes(b)) return false;
     return true;
+  });
+}
+
+function cartaoSite(pub) {
+  const im = pub.imagem;
+  const url = im?.ref ? `${API}/img/${im.ref}` : im?.caminho || im?.dataUrl || '';
+  return `<div class="cartao-site${url ? '' : ' sem-img'}">
+    ${url ? `<div class="bg" style="background-image:url('${esc(url)}')"></div>` : ''}
+    <div class="veu"></div>
+    <div class="txt"><h4>${esc(pub.titulo || 'Sem título')}</h4>${pub.texto ? `<p>${esc(pub.texto)}</p>` : ''}<span>${esc(pub.chamada || 'Saiba mais')} →</span></div>
+  </div>`;
+}
+
+function desenharCatalogo() {
+  document.title = 'Odisse · Catálogo de serviços';
+  const d = catalogo.atualizado ? new Date(catalogo.atualizado) : null;
+  $('#pagina').innerHTML = `
+    <div class="cabecalho">
+      <h1 class="u-titulo">Catálogo de serviços</h1>
+      <div class="cab-acoes">
+        <span class="u-apoio">${d ? `Atualizado em ${quando(catalogo.atualizado)}` : 'Catálogo inicial, ainda não gravado'}</span>
+        <a class="u-botao forte" href="#/novo">+ Novo produto</a>
+      </div>
+    </div>
+    <div class="filtros">
+      <div class="seletor" id="selSituacao" role="radiogroup" aria-label="Situação"></div>
+      <div class="seletor" id="selTrilho" role="radiogroup" aria-label="Trilho"></div>
+      <label class="busca"><input type="search" id="busca" placeholder="Buscar" aria-label="Buscar produto" value="${esc(filtros.busca)}"></label>
+      <button class="limpar" id="btLimpar" type="button" hidden>limpar</button>
+    </div>
+    <div class="aviso" id="avisoGeral" hidden></div>
+    <div class="regua cat" aria-hidden="true"><span>Produto</span><span>Trilho</span><span>Degrau</span><span>Situação</span><span>No site</span><span>Landing page</span><span></span></div>
+    <div class="registro" id="lista"></div>
+    <section class="secao">
+      <h2 class="u-subtitulo">Grid no site</h2>
+      <div class="grid-previa" id="gridPrevia"></div>
+    </section>
+    <section class="secao notas">
+      <div><h3 class="u-rotulo">Como o grid se forma</h3>
+        <p>Entra no grid de serviços da página <a href="/inicio/" target="_blank" rel="noopener">/inicio/</a> todo produto <b>no ar</b>, marcado para aparecer no site, com título e link. A ordem do grid é a ordem desta lista (setas à direita de cada linha). O site lê o catálogo a cada visita, com até um minuto de atraso.</p></div>
+      <div><h3 class="u-rotulo">Landing pages</h3>
+        <p>Abra o produto e vá em <b>Landing page</b> para montar a página dele com os blocos da biblioteca. As páginas guardam só os textos e as imagens; o desenho é o da <a href="#/blocos">biblioteca de blocos</a>, o mesmo em todas.</p></div>
+      <div><h3 class="u-rotulo">Nada se apaga</h3>
+        <p>Produto que saiu dos planos vai para <b>Arquivados</b>. Cada gravação do catálogo guarda o anterior (as 20 últimas versões ficam no servidor).</p></div>
+    </section>`;
+  desenharSeletores();
+  desenharLista();
+  desenharGridPrevia();
+
+  $('#selSituacao').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    filtros.situacao = b.dataset.v; guardar(CHAVE_FILTROS, { situacao: filtros.situacao, trilho: filtros.trilho }); desenharSeletores(); desenharLista();
+  });
+  $('#selTrilho').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    filtros.trilho = b.dataset.v; guardar(CHAVE_FILTROS, { situacao: filtros.situacao, trilho: filtros.trilho }); desenharSeletores(); desenharLista();
+  });
+  $('#busca').addEventListener('input', (e) => { filtros.busca = e.target.value; desenharSeletores(); desenharLista(); });
+  $('#btLimpar').addEventListener('click', () => {
+    filtros = { situacao: 'todos', trilho: 'todos', busca: '' }; guardar(CHAVE_FILTROS, filtros); desenharCatalogo();
+  });
+  $('#lista').addEventListener('click', (e) => {
+    const mv = e.target.closest('[data-mover]');
+    const linha = e.target.closest('.linha');
+    if (!linha) return;
+    if (mv) { e.stopPropagation(); mover(linha.dataset.id, Number(mv.dataset.mover)); return; }
+    if (getSelection().toString()) return;
+    location.hash = `#/produto/${encodeURIComponent(linha.dataset.id)}`;
+  });
+  $('#lista').addEventListener('keydown', (e) => {
+    const linha = e.target.closest('.linha');
+    if (linha && e.target === linha && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); location.hash = `#/produto/${encodeURIComponent(linha.dataset.id)}`; }
   });
 }
 
@@ -171,21 +345,18 @@ function desenharSeletores() {
 
 function desenharLista() {
   const lista = visiveis();
-  if (!lista.length) {
-    $('#lista').innerHTML = '<div class="vazio">Nenhum produto com estes filtros.</div>';
-    return;
-  }
-  $('#lista').innerHTML = lista.map((p) => {
-    const i = lista.indexOf(p);
+  if (!lista.length) { $('#lista').innerHTML = '<div class="vazio">Nenhum produto com estes filtros.</div>'; return; }
+  $('#lista').innerHTML = lista.map((p, i) => {
     const sub = p.publico.titulo && p.publico.texto ? `${p.publico.titulo} · ${p.publico.texto}` : (p.publico.texto || p.publico.titulo || p.notas || '');
     const classe = p.situacao === 'a-desenvolver' ? ' tracejada' : p.situacao === 'arquivado' ? ' arquivada' : '';
-    return `<div class="linha${classe}" role="button" tabindex="0" data-id="${esc(p.id)}">
+    return `<div class="linha cat${classe}" role="link" tabindex="0" data-id="${esc(p.id)}">
       <div class="linha-nome"><b>${esc(p.nome)}</b><small>${esc(sub) || '<span class="sem">—</span>'}</small></div>
       <div class="linha-etqs">
         <span class="col"><span class="etq">${esc(nomeDe(TRILHOS, p.trilho))}</span></span>
         <span class="col">${degrauEtq(p.degrau)}</span>
         <span class="col">${situacaoEtq(p.situacao)}</span>
         <span class="col">${noSiteEtq(p)}</span>
+        <span class="col">${paginaEtq(p.id)}</span>
       </div>
       <div class="linha-cmd">
         <button class="caixa" type="button" data-mover="-1" aria-label="Subir ${esc(p.nome)}" title="Subir" ${i === 0 ? 'disabled' : ''}>${IC.cima}</button>
@@ -195,40 +366,9 @@ function desenharLista() {
   }).join('');
 }
 
-function cartaoSite(pub, classeExtra = '') {
-  const im = pub.imagem;
-  const url = im?.ref ? `${API}/img/${im.ref}` : im?.caminho || im?.dataUrl || '';
-  return `<div class="cartao-site${url ? '' : ' sem-img'}${classeExtra}">
-    ${url ? `<div class="bg" style="background-image:url('${esc(url)}')"></div>` : ''}
-    <div class="veu"></div>
-    <div class="txt"><h4>${esc(pub.titulo || 'Sem título')}</h4>${pub.texto ? `<p>${esc(pub.texto)}</p>` : ''}<span>${esc(pub.chamada || 'Saiba mais')} →</span></div>
-  </div>`;
-}
-
-function desenharGrid() {
+function desenharGridPrevia() {
   const noGrid = catalogo.produtos.filter((p) => p.situacao === 'no-ar' && p.noSite && p.publico.titulo && p.publico.link);
-  $('#gridPrevia').innerHTML = noGrid.length
-    ? noGrid.map((p) => cartaoSite(p.publico)).join('')
-    : '<div class="vazio">Nenhum produto no ar marcado para o site.</div>';
-}
-
-function desenhar() {
-  if (!catalogo) return;
-  desenharSeletores();
-  desenharLista();
-  desenharGrid();
-  const d = catalogo.atualizado ? new Date(catalogo.atualizado) : null;
-  $('#atualizado').textContent = d ? `Atualizado em ${d.toLocaleDateString('pt-BR')} às ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : 'Catálogo inicial, ainda não gravado';
-}
-
-let avisoTimer;
-function avisar(msg, tipo = '') {
-  const a = $('#avisoGeral');
-  a.className = `aviso ${tipo}`;
-  a.textContent = msg;
-  a.hidden = false;
-  clearTimeout(avisoTimer);
-  if (tipo === 'ok') avisoTimer = setTimeout(() => { a.hidden = true; }, 3500);
+  $('#gridPrevia').innerHTML = noGrid.length ? noGrid.map((p) => cartaoSite(p.publico)).join('') : '<div class="vazio">Nenhum produto no ar marcado para o site.</div>';
 }
 
 // mover dentro da lista visível: troca de lugar com o vizinho visível no catálogo inteiro
@@ -241,261 +381,678 @@ async function mover(id, passo) {
   const a = produtos.findIndex((p) => p.id === id);
   const b = produtos.findIndex((p) => p.id === vizinho.id);
   [produtos[a], produtos[b]] = [produtos[b], produtos[a]];
-  await gravar(produtos);
+  if (await gravarCatalogo(produtos)) { desenharLista(); desenharGridPrevia(); }
   document.querySelector(`.linha[data-id="${CSS.escape(id)}"] [data-mover="${passo}"]`)?.focus();
 }
 
-// ---------------------------------------------------------------- gaveta
+// ================================================================ PEÇAS COMUNS (Bloco, campos)
 
-const blocosFechados = ler(CHAVE_BLOCOS, {});
-const vazio = () => ({ id: '', nome: '', trilho: filtros.trilho !== 'todos' ? filtros.trilho : 'cliente', degrau: 'contrato', situacao: 'a-desenvolver', noSite: true,
-  publico: { titulo: '', texto: '', chamada: '', link: '', imagem: null }, notas: '' });
-const copiar = (p) => JSON.parse(JSON.stringify(p));
-const slug = (s) => semAcento(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60);
-
-function bloco(id, titulo, corpo) {
-  const fechado = blocosFechados[id] ? ' fechado' : '';
-  return `<section class="bloco${fechado}" data-bloco="${id}">
-    <button type="button" class="bloco-cab" aria-expanded="${!fechado}"><h3>${esc(titulo)}</h3><span class="caixa" aria-hidden="true">${IC.baixo}</span></button>
+function bloco(id, titulo, corpo, { extra = '', classe = '', cabExtra = '' } = {}) {
+  // os blocos de uma landing page começam recolhidos (a página tem muitos); o resto começa aberto
+  const fechado = (id.startsWith('b-') ? fechados[id] !== false : fechados[id]) ? ' fechado' : '';
+  return `<section class="bloco${fechado}${classe ? ` ${classe}` : ''}" data-bloco="${esc(id)}">
+    <div class="bloco-cab">${cabExtra}<h3 class="bloco-h"><button type="button" class="bloco-alterna" aria-expanded="${!fechado}">${titulo}</button></h3>${extra}<button type="button" class="caixa bloco-seta" data-alterna aria-label="Recolher ou abrir">${IC.baixo}</button></div>
     <div class="bloco-corpo">${corpo}</div>
   </section>`;
 }
 
-function campoTexto(nome, rotulo, valor, { max, dica, area, tipo = 'text', lista } = {}) {
-  const conta = max ? `<span class="conta" data-conta="${nome}">${(valor || '').length} / ${max}</span>` : '';
-  const ctl = area
-    ? `<textarea name="${nome}" rows="${area}" ${max ? `maxlength="${max}"` : ''}>${esc(valor)}</textarea>`
-    : `<input type="${tipo}" name="${nome}" value="${esc(valor)}" ${max ? `maxlength="${max}"` : ''} ${lista ? `list="${lista}"` : ''}>`;
-  return `<label class="u-campo"><span>${esc(rotulo)}${conta}</span>${ctl}${dica ? `<small>${esc(dica)}</small>` : ''}</label>`;
+function alternarBloco(b) {
+  b.classList.toggle('fechado');
+  b.querySelector('.bloco-alterna')?.setAttribute('aria-expanded', !b.classList.contains('fechado'));
+  fechados[b.dataset.bloco] = b.classList.contains('fechado');
+  guardar(CHAVE_BLOCOS, fechados);
 }
 
-function seletorCampo(nome, opcoes, valor) {
-  return `<div class="seletor pequeno" role="radiogroup" data-campo="${nome}">${opcoes.map(([id, rotulo]) =>
-    `<button type="button" role="radio" data-v="${id}" aria-checked="${valor === id}">${esc(rotulo)}</button>`).join('')}</div>`;
+function conta(c, valor) { return c.max ? `<span class="conta" data-conta>${(valor || '').length} / ${c.max}</span>` : ''; }
+
+// campo simples a partir do esquema da biblioteca (texto, área, link, imagem, chave, textos, lista)
+function campo(c, valor, caminho) {
+  const dica = c.dica ? `<small>${esc(c.dica)}</small>` : '';
+  const at = `data-c="${esc(caminho)}"`;
+  switch (c.tipo) {
+    case 'texto':
+    case 'link':
+      return `<label class="u-campo${c.tipo === 'link' ? ' link' : ''}"><span>${esc(c.rotulo)}${conta(c, valor)}</span><input type="text" ${at} value="${esc(valor)}" ${c.max ? `maxlength="${c.max}"` : ''} spellcheck="${c.tipo === 'texto'}">${dica}</label>`;
+    case 'area':
+      return `<label class="u-campo largo"><span>${esc(c.rotulo)}${conta(c, valor)}</span><textarea ${at} rows="${c.max > 700 ? 7 : c.max > 300 ? 4 : 3}" ${c.max ? `maxlength="${c.max}"` : ''}>${esc(valor)}</textarea>${dica || (c.max > 300 ? '<small>Linha em branco separa parágrafos.</small>' : '')}</label>`;
+    case 'chave':
+      return `<label class="chave largo"><input type="checkbox" ${at} ${valor ? 'checked' : ''}> ${esc(c.rotulo)}</label>`;
+    case 'imagem': {
+      const u = urlImagem(valor, API);
+      return `<div class="u-campo imagem-campo-l ${esc(c.formato || '')}"><span>${esc(c.rotulo)}</span>
+        <div class="imagem-campo">
+          <div class="imagem-mini f-${esc(c.formato || 'paisagem')}${u ? '' : ' vazia'}" ${u ? `style="background-image:url('${esc(u)}')"` : ''}>${u ? '' : 'sem imagem'}</div>
+          <div class="imagem-acoes">
+            <button type="button" class="u-botao" data-imagem="${esc(caminho)}" data-formato="${esc(c.formato || '')}">${u ? 'Trocar imagem' : 'Enviar imagem'}</button>
+            ${u ? `<button type="button" class="u-botao perigo" data-tirar-imagem="${esc(caminho)}">Tirar imagem</button>` : ''}
+            ${dica}
+          </div>
+        </div></div>`;
+    }
+    case 'textos': {
+      const itens = Array.isArray(valor) ? valor : [];
+      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span><div class="pilha-textos">
+        ${itens.map((x, i) => `<div class="pt-linha"><input type="text" data-c="${esc(caminho)}.${i}" value="${esc(x)}" maxlength="${c.maxItem || 200}" aria-label="${esc(c.rotulo)} ${i + 1}">
+          <span class="cmds"><button type="button" class="caixa" data-item="sobe" data-lista="${esc(caminho)}" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${IC.cima}</button><button type="button" class="caixa" data-item="desce" data-lista="${esc(caminho)}" data-i="${i}" ${i === itens.length - 1 ? 'disabled' : ''} aria-label="Descer">${IC.baixo}</button><button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar">${IC.fechar}</button></span></div>`).join('')}
+        ${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar item</button>` : ''}
+      </div></div>`;
+    }
+    case 'lista': {
+      const itens = Array.isArray(valor) ? valor : [];
+      const min = c.min || 0;
+      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span>${dica}<div class="pilha-itens">
+        ${itens.map((it, i) => `<div class="item">
+          <div class="item-cab"><span class="item-num">${i + 1}</span><b>${esc(c.rotuloItem || 'Item')}</b>
+            <span class="cmds"><button type="button" class="caixa" data-item="sobe" data-lista="${esc(caminho)}" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${IC.cima}</button><button type="button" class="caixa" data-item="desce" data-lista="${esc(caminho)}" data-i="${i}" ${i === itens.length - 1 ? 'disabled' : ''} aria-label="Descer">${IC.baixo}</button>${itens.length > min ? `<button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar">${IC.fechar}</button>` : ''}</span></div>
+          <div class="item-campos">${c.campos.map((s) => campo(s, it?.[s.id], `${caminho}.${i}.${s.id}`)).join('')}</div>
+        </div>`).join('')}
+        ${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar ${esc((c.rotuloItem || 'item').toLowerCase())}</button>` : ''}
+      </div></div>`;
+    }
+    default: return '';
+  }
 }
 
-function desenharGaveta() {
-  const p = aberto.rascunho;
-  $('#gavRotulo').textContent = aberto.novo ? 'Novo produto' : 'Produto';
-  $('#gavTitulo').textContent = p.nome || 'Sem nome';
+// miniatura de um bloco: a página de verdade, num quadro reduzido (sem clique)
+function miniatura(tipoId, dados) {
+  let html = desenharBloco({ tipo: tipoId, dados: dados || tipoDe(tipoId).exemplo }, { pagina: { formulario: '/formulario/', chamada: 'Quero Solicitar um Orçamento', whatsapp: true }, api: API, vazias: true });
+  if (tipoId === 'abertura-servicos') {
+    const c = (t) => `<a class="lp-servico sem-imagem"><div class="lp-servico-veu"></div><div class="lp-servico-txt"><h3>${t}</h3><p>Texto curto do serviço.</p><span class="lp-servico-cta">Ver projeto →</span></div></a>`;
+    html = html.replace('data-grid-servicos></div>', `data-grid-servicos style="--colunas:3">${c('Projeto Residencial')}${c('Interiores')}${c('Planejador da obra')}</div>`);
+  }
+  const doc = `<!doctype html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="https://marca.odisse.com.br/v1/marca.css"><link rel="stylesheet" href="/assets/lp/blocos.css"><style>html,body{overflow:hidden;pointer-events:none}.lp-tela{min-height:900px}</style></head><body class="lp">${html}</body></html>`;
+  return `<div class="mini"><iframe tabindex="-1" aria-hidden="true" loading="lazy" srcdoc="${esc(doc)}"></iframe></div>`;
+}
+const escalaMini = new ResizeObserver((es) => es.forEach((e) => e.target.style.setProperty('--escala', e.contentRect.width / 1440)));
+const ligarMinis = (el) => el.querySelectorAll('.mini').forEach((m) => escalaMini.observe(m));
+
+// caminhos: "p.titulo" (página), "b.<uid>.campo[.i[.sub]]" (bloco), "pr.campo" / "pr.publico.campo" (produto)
+function alvo(caminho) {
+  const partes = caminho.split('.');
+  let obj;
+  if (partes[0] === 'p') obj = ed.rascunho;
+  else if (partes[0] === 'pr') obj = ed.rascunho;
+  else if (partes[0] === 'b') { obj = ed.rascunho.blocos.find((b) => b.uid === partes[1])?.dados; partes.splice(0, 1); }
+  partes.splice(0, 1);
+  const chave = partes.pop();
+  for (const k of partes) obj = obj?.[k];
+  return { obj, chave };
+}
+const lerCaminho = (c) => { const { obj, chave } = alvo(c); return obj?.[chave]; };
+const porCaminho = (c, v) => { const { obj, chave } = alvo(c); if (obj) obj[chave] = v; };
+
+// ================================================================ SUBPÁGINA DO PRODUTO
+
+const vazio = () => ({ id: '', nome: '', trilho: filtros.trilho !== 'todos' ? filtros.trilho : 'cliente', degrau: 'contrato', situacao: 'a-desenvolver', noSite: true,
+  publico: { titulo: '', texto: '', chamada: '', link: '', imagem: null }, notas: '' });
+
+function cabecalhoProduto(p, aba) {
+  const id = encodeURIComponent(p.id);
+  const abas = p.id
+    ? `<nav class="abas-caixa" aria-label="Subpáginas do produto"><a href="#/produto/${id}" class="${aba === 'ficha' ? 'ativa' : ''}">Ficha</a><a href="#/produto/${id}/pagina" class="${aba === 'pagina' ? 'ativa' : ''}">Landing page</a></nav>`
+    : '<nav class="abas-caixa"><a class="ativa">Ficha</a></nav>';
+  return `<div class="abas-caixa-linha"><span class="u-rotulo">Produto</span>${abas}</div>
+    <nav class="u-trilha" aria-label="Caminho"><a href="#/">Catálogo</a><span class="sep">/</span><span aria-current="page" id="trilhaNome">${esc(p.nome || 'Produto novo')}</span></nav>`;
+}
+
+function desenharProduto() {
+  const p = rota.id ? catalogo.produtos.find((x) => x.id === rota.id) : vazio();
+  if (!p) {
+    $('#pagina').innerHTML = `<nav class="u-trilha"><a href="#/">Catálogo</a></nav><div class="vazio">Produto não encontrado.</div>`;
+    return;
+  }
+  document.title = `Odisse · ${p.nome || 'Produto novo'}`;
+  if (rota.aba === 'pagina' && p.id) return desenharMontador({ id: p.id, produto: p });
+  ed = { tipo: 'produto', original: copiar(p), rascunho: copiar(p), novo: !p.id, arquivo: null };
+  desenharFicha();
+}
+
+function desenharFicha() {
+  const p = ed.rascunho;
   const im = p.publico.imagem;
   const imgUrl = im?.ref ? `${API}/img/${im.ref}` : im?.caminho || im?.dataUrl || '';
+  const pg = p.id ? resumoDe(p.id) : null;
+  const sugerido = pg ? (pg.casca ? `/${pg.slug}/` : `/lp/?p=${pg.slug}`) : '';
+  const opc = (lista, v) => lista.map(([id, n]) => `<option value="${id}" ${v === id ? 'selected' : ''}>${esc(n)}</option>`).join('');
 
   const situacao = `
-    ${campoTexto('nome', 'Nome interno', p.nome, { max: 120 })}
-    <div class="grupo-campo"><span class="rotulo-campo">Situação</span>${seletorCampo('situacao', SITUACOES.map(([id, n]) => [id, n]), p.situacao)}</div>
-    <div class="duas">
-      <label class="u-campo"><span>Trilho</span><select name="trilho">${TRILHOS.map(([id, n]) => `<option value="${id}" ${p.trilho === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-      <label class="u-campo"><span>Degrau</span><select name="degrau">${DEGRAUS.map(([id, n]) => `<option value="${id}" ${p.degrau === id ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-    </div>
-    <label class="chave"><input type="checkbox" name="noSite" ${p.noSite ? 'checked' : ''}> Aparece no grid do site quando estiver no ar</label>
-    ${aberto.novo ? '' : `<div class="dica" style="margin-top:12px">Código <span class="etq codigo">${esc(p.id)}</span></div>`}`;
+    <label class="u-campo largo"><span>Nome interno${conta({ max: 120 }, p.nome)}</span><input type="text" data-c="pr.nome" value="${esc(p.nome)}" maxlength="120"></label>
+    <div class="grupo-campo largo"><span class="rotulo-campo">Situação</span><div class="seletor pequeno" role="radiogroup" data-seletor="pr.situacao">${SITUACOES.map(([id, n]) =>
+      `<button type="button" role="radio" data-v="${id}" aria-checked="${p.situacao === id}">${esc(n)}</button>`).join('')}</div></div>
+    <label class="u-campo"><span>Trilho</span><select data-c="pr.trilho">${opc(TRILHOS, p.trilho)}</select></label>
+    <label class="u-campo"><span>Degrau</span><select data-c="pr.degrau">${opc(DEGRAUS, p.degrau)}</select></label>
+    <label class="chave largo"><input type="checkbox" data-c="pr.noSite" ${p.noSite ? 'checked' : ''}> Aparece no grid do site quando estiver no ar</label>
+    ${ed.novo ? '' : `<div class="dica largo">Código <span class="etq codigo">${esc(p.id)}</span></div>`}`;
 
   const site = `
-    ${campoTexto('titulo', 'Título no cartão', p.publico.titulo, { max: 120 })}
-    ${campoTexto('texto', 'Texto', p.publico.texto, { max: 240, area: 3 })}
-    <div class="duas">
-      ${campoTexto('chamada', 'Chamada', p.publico.chamada, { max: 40, dica: 'Ex.: Ver projeto, Fazer meu plano' })}
-      ${campoTexto('link', 'Link', p.publico.link, { dica: 'Página do servicos (/residencial/) ou endereço completo' })}
-    </div>
-    <div class="grupo-campo"><span class="rotulo-campo">Imagem de capa</span>
+    <label class="u-campo largo"><span>Título no cartão${conta({ max: 120 }, p.publico.titulo)}</span><input type="text" data-c="pr.publico.titulo" value="${esc(p.publico.titulo)}" maxlength="120"></label>
+    <label class="u-campo largo"><span>Texto${conta({ max: 240 }, p.publico.texto)}</span><textarea data-c="pr.publico.texto" rows="3" maxlength="240">${esc(p.publico.texto)}</textarea></label>
+    <label class="u-campo"><span>Chamada${conta({ max: 40 }, p.publico.chamada)}</span><input type="text" data-c="pr.publico.chamada" value="${esc(p.publico.chamada)}" maxlength="40"><small>Ex.: Ver projeto, Fazer meu plano</small></label>
+    <label class="u-campo"><span>Link</span><input type="text" data-c="pr.publico.link" value="${esc(p.publico.link)}" spellcheck="false">
+      <small>${sugerido && sugerido !== p.publico.link ? `Landing page deste produto: <button type="button" class="link-texto" data-usar-link="${esc(sugerido)}">usar ${esc(sugerido)}</button>` : 'Página do servicos (/residencial/) ou endereço completo'}</small></label>
+    <div class="grupo-campo largo"><span class="rotulo-campo">Imagem de capa</span>
       <div class="imagem-campo">
-        <div class="imagem-mini${imgUrl ? '' : ' vazia'}" ${imgUrl ? `style="background-image:url('${esc(imgUrl)}')"` : ''}>${imgUrl ? '' : 'sem imagem'}</div>
+        <div class="imagem-mini f-retrato${imgUrl ? '' : ' vazia'}" ${imgUrl ? `style="background-image:url('${esc(imgUrl)}')"` : ''}>${imgUrl ? '' : 'sem imagem'}</div>
         <div class="imagem-acoes">
-          <button type="button" class="u-botao" data-acao="imagem">${imgUrl ? 'Trocar imagem' : 'Enviar imagem'}</button>
-          ${imgUrl ? '<button type="button" class="u-botao perigo" data-acao="tirar-imagem">Tirar imagem</button>' : ''}
+          <button type="button" class="u-botao" data-capa>${imgUrl ? 'Trocar imagem' : 'Enviar imagem'}</button>
+          ${imgUrl ? '<button type="button" class="u-botao perigo" data-tirar-capa>Tirar imagem</button>' : ''}
           <small class="dica">Vertical, 4:5. Convertida para WebP aqui no navegador.</small>
         </div>
       </div>
-      <input type="file" accept="image/*" id="arqImagem" hidden>
     </div>
-    <div class="u-rotulo previa-rotulo">Como sai no site</div>
-    <div class="previa-gav">${cartaoSite(p.publico)}</div>`;
+    <div class="largo"><div class="u-rotulo previa-rotulo">Como sai no site</div><div class="previa-cartao" id="previaCartao">${cartaoSite(p.publico)}</div></div>`;
 
-  const notas = campoTexto('notas', 'O que falta, decisões, dependências', p.notas, { area: 6, max: 4000 });
+  const notas = `<label class="u-campo largo"><span>O que falta, decisões, dependências${conta({ max: 4000 }, p.notas)}</span><textarea data-c="pr.notas" rows="8" maxlength="4000">${esc(p.notas)}</textarea></label>`;
 
-  $('#gavForm').innerHTML = bloco('situacao', 'Situação', situacao) + bloco('site', 'No site', site) + bloco('notas', 'Notas internas', notas)
-    + (aberto.novo || p.situacao === 'arquivado' ? '' : '<div class="gav-rodape"><button type="button" class="u-botao perigo" data-acao="arquivar">Arquivar produto</button></div>');
+  const pgBloco = p.id ? (pg
+    ? `<div class="largo resumo-pagina"><span class="etq ${pg.publicada ? (pg.pendente ? 'atencao' : 'ok') : 'tracejada'}">${pg.publicada ? (pg.pendente ? 'mudanças não publicadas' : 'publicada') : 'rascunho'}</span>
+        <span>/${esc(pg.slug)}/ · ${pg.blocos} blocos</span></div>
+       <a class="u-botao meia" href="#/produto/${encodeURIComponent(p.id)}/pagina">Abrir a landing page</a>`
+    : `<p class="largo dica-texto">Este produto ainda não tem landing page.</p><a class="u-botao meia" href="#/produto/${encodeURIComponent(p.id)}/pagina">Montar landing page</a>`) : '';
+
+  $('#pagina').innerHTML = `${cabecalhoProduto(p, 'ficha')}
+    <div class="cabecalho"><h1 class="u-titulo" id="tituloPagina">${esc(p.nome || 'Produto novo')}</h1>
+      <div class="cab-acoes">${situacaoEtq(p.situacao)}</div></div>
+    <div class="aviso" id="avisoGeral" hidden></div>
+    <div class="blocos-fluxo" style="--bloco-larg:520px">
+      ${bloco('ficha-situacao', 'Situação', `<div class="grade">${situacao}</div>`)}
+      ${p.id ? bloco('ficha-pagina', 'Landing page', `<div class="grade">${pgBloco}</div>`) : ''}
+      ${bloco('ficha-site', 'Cartão no site', `<div class="grade">${site}</div>`)}
+      ${bloco('ficha-notas', 'Notas internas', notas)}
+    </div>
+    ${ed.novo || p.situacao === 'arquivado' ? '' : '<div class="rodape-acoes"><button type="button" class="u-botao perigo" data-arquivar>Arquivar produto</button></div>'}`;
   marcarMudanca();
+  if (ed.novo) setTimeout(() => $('[data-c="pr.nome"]')?.focus(), 0);
 }
 
-function mudou() {
-  if (!aberto) return false;
-  const { imagem: a, ...ra } = aberto.rascunho.publico;
-  const { imagem: b, ...rb } = aberto.original.publico;
-  return aberto.novo || aberto.arquivo
-    || JSON.stringify({ ...aberto.rascunho, publico: ra }) !== JSON.stringify({ ...aberto.original, publico: rb })
-    || JSON.stringify(a) !== JSON.stringify(b);
-}
-
-function marcarMudanca() {
-  const m = mudou();
-  $('#barraSalvar').hidden = !m;
-  $('#barraTexto').textContent = aberto?.novo ? 'Produto novo, ainda não salvo' : 'Mudanças não salvas';
-}
-
-function abrirGaveta(id) {
-  const p = id ? catalogo.produtos.find((x) => x.id === id) : vazio();
-  if (!p) return;
-  aberto = { original: copiar(p), rascunho: copiar(p), novo: !id, arquivo: null, origem: document.activeElement };
-  desenharGaveta();
-  $('#gavetaFundo').hidden = false;
-  $('#gaveta').hidden = false;
-  document.body.style.overflow = 'hidden';
-  setTimeout(() => (aberto.novo ? $('#gavForm [name="nome"]') : $('#gavFechar')).focus(), 0);
-}
-
-function fecharGaveta(forcar) {
-  if (!aberto) return;
-  if (!forcar && mudou() && !confirm('Descartar as mudanças deste produto?')) return;
-  const origem = aberto.origem;
-  aberto = null;
-  $('#gavetaFundo').hidden = true;
-  $('#gaveta').hidden = true;
-  $('#barraSalvar').hidden = true;
-  document.body.style.overflow = '';
-  origem?.focus?.();
-}
-
-async function salvarGaveta() {
-  const p = aberto.rascunho;
+async function salvarProduto() {
+  const p = ed.rascunho;
   p.nome = p.nome.trim();
-  if (!p.nome) { avisarGaveta('Dê um nome ao produto.'); $('#gavForm [name="nome"]').focus(); return; }
+  if (!p.nome) { avisar('Dê um nome ao produto.', 'erro'); $('[data-c="pr.nome"]')?.focus(); return; }
   if (p.situacao === 'no-ar' && p.noSite && (!p.publico.titulo.trim() || !p.publico.link.trim())) {
     if (!confirm('No ar e marcado para o site, mas sem título ou link: não vai aparecer no grid. Salvar assim mesmo?')) return;
   }
-  const btn = $('#btSalvar');
-  btn.disabled = true; btn.textContent = 'Salvando…';
+  ocupado(true);
   try {
-    if (aberto.novo) {
-      let base = slug(p.nome) || 'produto', id = base, n = 2;
-      while (catalogo.produtos.some((x) => x.id === id)) id = `${base}-${n++}`;
+    if (ed.novo) {
+      const base = slugDe(p.nome) || 'produto';
+      let id = base, n = 2;
+      while (catalogo.produtos.some((x) => x.id === id) || id === 'inicio') id = `${base}-${n++}`;
       p.id = id;
     }
-    if (aberto.arquivo) {
-      const { reduzir } = await import('https://universo.odisse.com.br/base/v1/imagens.js');
-      const bmp = await createImageBitmap(aberto.arquivo, { imageOrientation: 'from-image' });
-      const m = await reduzir(bmp, 1600);
-      bmp.close?.();
-      const ref = `${p.id}-${Date.now().toString(36)}`;
-      await api(`/api/admin/imagens/${ref}`, { method: 'PUT', body: m.blob, headers: { 'Content-Type': m.blob.type } });
-      p.publico.imagem = { ref, w: m.w, h: m.h };
-    }
+    if (ed.arquivo) { p.publico.imagem = await enviarImagem(ed.arquivo, p.id); ed.arquivo = null; }
     const limpo = copiar(p);
     if (limpo.publico.imagem?.dataUrl) limpo.publico.imagem = null;
-    const produtos = aberto.novo ? [...catalogo.produtos, limpo] : catalogo.produtos.map((x) => (x.id === p.id ? limpo : x));
-    const ok = await gravar(produtos, aberto.novo ? `“${p.nome}” entrou no catálogo.` : `“${p.nome}” salvo.`);
-    if (ok) fecharGaveta(true);
+    const produtos = ed.novo ? [...catalogo.produtos, limpo] : catalogo.produtos.map((x) => (x.id === p.id ? limpo : x));
+    const novo = ed.novo;
+    if (await gravarCatalogo(produtos, novo ? `“${p.nome}” entrou no catálogo.` : `“${p.nome}” salvo.`)) {
+      ed.original = copiar(limpo); ed.rascunho = copiar(limpo); ed.novo = false;
+      if (novo) { hashAtual = `#/produto/${encodeURIComponent(p.id)}`; history.replaceState(null, '', hashAtual); rota = { nome: 'produto', id: p.id, aba: 'ficha' }; }
+      desenharFicha();
+      avisar(novo ? `“${p.nome}” entrou no catálogo.` : `“${p.nome}” salvo.`, 'ok');
+    }
   } catch (e) {
-    avisarGaveta('Não consegui salvar: ' + e.message);
+    avisar('Não consegui salvar: ' + e.message, 'erro');
   } finally {
-    btn.disabled = false; btn.textContent = 'Salvar';
+    ocupado(false);
   }
 }
 
-function avisarGaveta(msg) {
-  let a = $('#gavForm .aviso');
-  if (!a) { a = document.createElement('div'); $('#gavForm').prepend(a); }
-  a.className = 'aviso erro';
-  a.textContent = msg;
+// ================================================================ MONTADOR DA LANDING PAGE
+
+function desenharInicio() {
+  document.title = 'Odisse · Página inicial';
+  desenharMontador({ id: 'inicio', produto: null });
 }
 
-// ---------------------------------------------------------------- eventos
+async function desenharMontador({ id, produto }) {
+  const cab = produto
+    ? cabecalhoProduto(produto, 'pagina') + `<div class="cabecalho"><h1 class="u-titulo">${esc(produto.nome)}</h1><div class="cab-acoes" id="acoesPagina"></div></div>`
+    : `<div class="cabecalho"><h1 class="u-titulo">Página inicial</h1><div class="cab-acoes" id="acoesPagina"></div></div>`;
+  $('#pagina').innerHTML = `${cab}<div class="aviso" id="avisoGeral" hidden></div><div id="montador"><div class="vazio">Carregando…</div></div>`;
+  ed = { tipo: 'pagina', id, produto, registro: null, original: null, rascunho: null, criando: null };
+  const resumo = resumoDe(id);
+  if (!resumo && id !== 'inicio') {
+    // confere a nuvem (pode ter sido criada em outro computador)
+    await carregarPaginas();
+    if (ed?.id !== id) return;
+    if (!resumoDe(id)) return desenharCriacao();
+  }
+  try {
+    const d = await api(`/api/admin/paginas/${encodeURIComponent(id)}`);
+    if (ed?.id !== id) return;
+    abrirRegistro(d.registro, d.resumo);
+  } catch (e) {
+    if (e.status === 404) return desenharCriacao();
+    if (e.status === 401) return sair('A senha não vale mais. Entre de novo.');
+    $('#montador').innerHTML = `<div class="aviso erro">Não consegui abrir a página: ${esc(e.message)}</div>`;
+  }
+}
+
+function abrirRegistro(registro, resumo) {
+  ed.registro = registro;
+  ed.original = copiar(registro.rascunho);
+  ed.rascunho = copiar(registro.rascunho);
+  ed.criando = null;
+  if (resumo) trocarResumo(resumo);
+  desenharEditor();
+}
+
+// ---------- criação: escolher os blocos da biblioteca
+
+function desenharCriacao() {
+  const p = ed.produto;
+  const local = p?.publico.link?.match(/^\/([a-z0-9-]+)\/?$/)?.[1];
+  ed.criando = ed.criando || { escolha: new Set(SUGERIDOS), base: '', slug: local && !RESERVADOS.has(local) ? local : slugDe(p?.nome || '') };
+  const c = ed.criando;
+  const bases = paginas.filter((x) => x.id !== 'inicio');
+  $('#acoesPagina').innerHTML = '';
+  $('#montador').innerHTML = `
+    <div class="vazio grande">Este produto ainda não tem landing page. Escolha os blocos da biblioteca que vão compor a página e preencha os textos depois, bloco a bloco.</div>
+    <section class="secao">
+      <h2 class="u-subtitulo">Montar landing page</h2>
+      <div class="criar-linha">
+        <label class="u-campo"><span>Endereço</span><div class="campo-endereco"><span>servicos.odisse.com.br/</span><input type="text" id="novoSlug" value="${esc(c.slug)}" maxlength="60" spellcheck="false"><span>/</span></div></label>
+        <div class="grupo-campo"><span class="rotulo-campo">Começar com</span><div class="seletor" id="selBase" role="radiogroup">
+          <button type="button" role="radio" data-v="" aria-checked="${!c.base}">Blocos escolhidos, em branco</button>
+          ${bases.map((b) => `<button type="button" role="radio" data-v="${esc(b.id)}" aria-checked="${c.base === b.id}">Cópia de /${esc(b.slug)}/</button>`).join('')}
+        </div></div>
+      </div>
+      <div id="escolhaBlocos" ${c.base ? 'hidden' : ''}>
+        <div class="u-rotulo previa-rotulo">Blocos (<span id="nEscolha">${c.escolha.size}</span> escolhidos; a ordem pode mudar depois)</div>
+        ${vitrineTipos((t) => `<label class="tipo-cartao escolhivel${c.escolha.has(t.id) ? ' marcado' : ''}"><input type="checkbox" value="${t.id}" ${c.escolha.has(t.id) ? 'checked' : ''}>
+          ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}</span><span class="tipo-desc">${esc(t.desc)}</span></label>`, (t) => t.id !== 'abertura-servicos')}
+      </div>
+      <div class="rodape-acoes"><button type="button" class="u-botao forte" id="btCriar">Criar landing page</button></div>
+    </section>`;
+  ligarMinis($('#montador'));
+  $('#novoSlug').addEventListener('input', (e) => { c.slug = e.target.value.toLowerCase(); });
+  $('#selBase').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]'); if (!b) return;
+    c.base = b.dataset.v;
+    $('#selBase').querySelectorAll('button').forEach((x) => x.setAttribute('aria-checked', x === b));
+    $('#escolhaBlocos').hidden = !!c.base;
+  });
+  $('#escolhaBlocos').addEventListener('change', (e) => {
+    const cx = e.target.closest('input[type=checkbox]'); if (!cx) return;
+    if (cx.checked) c.escolha.add(cx.value); else c.escolha.delete(cx.value);
+    cx.closest('.tipo-cartao').classList.toggle('marcado', cx.checked);
+    $('#nEscolha').textContent = c.escolha.size;
+  });
+  $('#btCriar').addEventListener('click', criarPagina);
+}
+
+function vitrineTipos(cartao, filtro = () => true) {
+  return GRUPOS.map((g) => {
+    const tipos = TIPOS.filter((t) => t.grupo === g && filtro(t));
+    if (!tipos.length) return '';
+    return `<div class="grupo-tipos"><h3 class="u-rotulo">${esc(g)}</h3><div class="vitrine">${tipos.map(cartao).join('')}</div></div>`;
+  }).join('');
+}
+
+async function criarPagina() {
+  const c = ed.criando;
+  const p = ed.produto;
+  const slug = c.slug.trim().toLowerCase();
+  if (!SLUG.test(slug) || RESERVADOS.has(slug)) { avisar('Endereço inválido: use letras minúsculas, números e hífen (sem acento).', 'erro'); $('#novoSlug').focus(); return; }
+  let pagina;
+  if (c.base) {
+    try {
+      const d = await api(`/api/admin/paginas/${encodeURIComponent(c.base)}`);
+      pagina = { ...copiar(d.registro.rascunho), slug, titulo: `Odisse Arquitetos — ${p.publico.titulo || p.nome}`, descricao: '' };
+      pagina.blocos = pagina.blocos.map((b) => ({ ...b, uid: undefined }));
+    } catch (e) { avisar('Não consegui copiar a página: ' + e.message, 'erro'); return; }
+  } else {
+    const ordem = TIPOS.map((t) => t.id);
+    const escolhidos = [...c.escolha].sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
+    if (!escolhidos.length) { avisar('Escolha pelo menos um bloco.', 'erro'); return; }
+    pagina = { slug, titulo: `Odisse Arquitetos — ${p.publico.titulo || p.nome}`, descricao: p.publico.texto || '', formulario: '', chamada: 'Quero Solicitar um Orçamento', whatsapp: true, textoWhatsapp: 'Quero Falar no WhatsApp', blocos: escolhidos.map(novoBloco) };
+  }
+  ocupado(true, $('#btCriar'));
+  try {
+    const d = await api(`/api/admin/paginas/${encodeURIComponent(ed.id)}`, { method: 'PUT', body: JSON.stringify({ versao: 0, pagina: limparPagina(pagina) }) });
+    // o cartão do produto passa a apontar para a página, se ainda não tinha link
+    if (!p.publico.link) {
+      const produtos = catalogo.produtos.map((x) => (x.id === p.id ? { ...x, publico: { ...x.publico, link: `/${slug}/` } } : x));
+      await gravarCatalogo(produtos);
+      ed.produto = catalogo.produtos.find((x) => x.id === p.id) || p;
+    }
+    abrirRegistro(d.registro, d.resumo);
+    avisar('Landing page criada como rascunho. Preencha os blocos e publique quando estiver pronta.', 'ok');
+  } catch (e) {
+    avisar('Não consegui criar: ' + e.message, 'erro');
+  } finally {
+    ocupado(false, $('#btCriar'));
+  }
+}
+
+// ---------- editor: Bloco da página + Pilha de blocos
+
+function enderecoDe(slug, casca) { return casca ? `/${slug}/` : `/lp/?p=${slug}`; }
+
+function desenharAcoes() {
+  const r = resumoDe(ed.id);
+  const pub = ed.registro?.publicado;
+  const casca = r?.casca;
+  const slug = ed.registro.rascunho.slug;
+  const pendente = !pub || JSON.stringify(pub) !== JSON.stringify(ed.registro.rascunho) || sujo();
+  const estado = !pub ? '<span class="etq tracejada">rascunho, nunca publicada</span>'
+    : pendente ? `<span class="etq atencao">mudanças não publicadas</span>` : '<span class="etq ok">publicada</span>';
+  const quandoPub = ed.registro.publicadoEm ? `<span class="u-apoio">Publicada em ${quando(ed.registro.publicadoEm)}</span>` : '';
+  const ver = pub ? `<a class="u-botao" href="${esc(enderecoDe(pub.slug, r?.casca && pub.slug === slug))}" target="_blank" rel="noopener">Ver página ${IC.externo}</a>` : '';
+  const sep = casca ? '?' : '&';
+  $('#acoesPagina').innerHTML = `${quandoPub}${estado}
+    ${ver}<a class="u-botao" href="${esc(enderecoDe(slug, casca) + sep + 'previa')}" target="_blank" rel="noopener" title="Abre o rascunho salvo">Ver prévia ${IC.externo}</a>
+    <button type="button" class="u-botao forte" id="btPublicar" ${pendente ? '' : 'disabled'}>Publicar</button>`;
+  $('#btPublicar').addEventListener('click', publicar);
+}
+
+function resumoBloco(b) {
+  const d = b.dados || {};
+  return d.titulo || d.rotulo || (d.itens?.[0]?.valor ? d.itens.map((x) => x.valor).filter(Boolean).join(' · ') : '') || '';
+}
+
+function desenharEditor() {
+  const pg = ed.rascunho;
+  const r = resumoDe(ed.id);
+  const camposPagina = CAMPOS_PAGINA.map((c) => {
+    if (c.id === 'slug') {
+      return `<label class="u-campo largo"><span>${esc(c.rotulo)}</span><div class="campo-endereco"><span>servicos.odisse.com.br/</span><input type="text" data-c="p.slug" value="${esc(pg.slug)}" maxlength="60" spellcheck="false" ${ed.id === 'inicio' ? 'readonly' : ''}><span>/</span></div>
+        ${r && !r.casca && ed.id !== 'inicio' ? `<small>Endereço novo: até a casca ser criada no site, a página fica em <b>/lp/?p=${esc(pg.slug)}</b>.</small>` : ''}</label>`;
+    }
+    return campo(c, pg[c.id], `p.${c.id}`);
+  }).join('');
+
+  const pilha = pg.blocos.map((b, i) => {
+    const t = tipoDe(b.tipo);
+    const cmds = `<span class="cmds">
+      <button type="button" class="caixa" data-bloco-acao="sobe" data-uid="${b.uid}" ${i === 0 ? 'disabled' : ''} aria-label="Subir bloco">${IC.cima}</button>
+      <button type="button" class="caixa" data-bloco-acao="desce" data-uid="${b.uid}" ${i === pg.blocos.length - 1 ? 'disabled' : ''} aria-label="Descer bloco">${IC.baixo}</button>
+      <button type="button" class="caixa" data-bloco-acao="tira" data-uid="${b.uid}" aria-label="Tirar bloco">${IC.fechar}</button></span>`;
+    const aviso = t.topo && i > 0 ? '<div class="aviso">Bloco de topo: só aparece no site se for o primeiro da página.</div>' : '';
+    const titulo = `${esc(t.nome)}<small>${esc(resumoBloco(b))}</small>`;
+    return bloco(`b-${b.uid}`, titulo, `${aviso}<div class="grade">${t.campos.map((c) => campo(c, b.dados[c.id], `b.${b.uid}.${c.id}`)).join('')}</div>`,
+      { classe: `bloco-lp${t.escuro ? ' escuro' : ''}`, cabExtra: `<span class="pilha-num">${i + 1}</span>`, extra: `${t.escuro ? '<span class="etq">faixa escura</span>' : ''}${cmds}` });
+  }).join('');
+
+  $('#montador').innerHTML = `
+    ${bloco('pagina-geral', 'Página', `<div class="grade">${camposPagina}</div>`, { classe: 'bloco-pagina' })}
+    <section class="secao">
+      <div class="secao-cab"><h2 class="u-subtitulo">Blocos da página</h2><span class="u-apoio">${pg.blocos.length} blocos · os textos e as imagens ficam aqui; o desenho é o da <a href="#/blocos">biblioteca</a></span>
+        <span class="secao-cmds"><button type="button" class="link-texto" data-todos="abrir">abrir todos</button> · <button type="button" class="link-texto" data-todos="fechar">recolher todos</button></span></div>
+      <div class="pilha-blocos">${pilha}</div>
+      <button type="button" class="acrescentar grande" id="btMaisBloco">+ Acrescentar bloco</button>
+    </section>
+    <section class="secao notas">
+      <div><h3 class="u-rotulo">Como funciona</h3><p>Cada bloco é um padrão da biblioteca. Aqui se escolhem os blocos e a ordem e se preenchem os textos e as imagens; a página não é editada diretamente. <b>Salvar</b> guarda o rascunho; <b>Ver prévia</b> mostra o rascunho como vai sair; <b>Publicar</b> põe no ar.</p></div>
+      <div><h3 class="u-rotulo">Faixa escura</h3><p>Autoria, Números e Chamada final ficam na faixa ardósia. Blocos escuros vizinhos se juntam numa faixa só, emendada no rodapé.</p></div>
+      <div><h3 class="u-rotulo">Botões de contato</h3><p>O formulário e o WhatsApp vêm do Bloco <b>Página</b>. Sem formulário, o WhatsApp vira o botão principal. A conversão do Google Ads conta os cliques no WhatsApp de qualquer bloco.</p></div>
+    </section>`;
+  desenharAcoes();
+  marcarMudanca();
+}
+
+async function salvarPagina() {
+  const pg = limparPagina(ed.rascunho);
+  if (!SLUG.test(pg.slug) || (RESERVADOS.has(pg.slug))) { avisar('Endereço inválido: use letras minúsculas, números e hífen (sem acento).', 'erro'); return false; }
+  ocupado(true);
+  try {
+    const d = await api(`/api/admin/paginas/${encodeURIComponent(ed.id)}`, { method: 'PUT', body: JSON.stringify({ versao: ed.registro.versao, pagina: pg }) });
+    const aberto = [...document.querySelectorAll('.bloco-lp:not(.fechado)')].map((b) => b.dataset.bloco);
+    const y = scrollY;
+    abrirRegistro(d.registro, d.resumo);
+    aberto.forEach((id) => { const b = document.querySelector(`[data-bloco="${CSS.escape(id)}"]`); if (b?.classList.contains('fechado')) alternarBloco(b); });
+    scrollTo(0, y);
+    avisar('Rascunho salvo. Publique para pôr no ar.', 'ok');
+    return true;
+  } catch (e) {
+    if (e.status === 409 && e.dados?.registro) {
+      avisar('Esta página foi mudada em outro lugar. Recarregue (Descartar) e refaça a mudança.', 'erro');
+    } else if (e.status === 401) sair('A senha não vale mais. Entre de novo.');
+    else avisar('Não consegui salvar: ' + e.message, 'erro');
+    return false;
+  } finally {
+    ocupado(false);
+  }
+}
+
+async function publicar() {
+  if (sujo() && !(await salvarPagina())) return;
+  const bt = $('#btPublicar');
+  ocupado(true, bt);
+  try {
+    const d = await api(`/api/admin/paginas/${encodeURIComponent(ed.id)}/publicar`, { method: 'POST', body: JSON.stringify({ versao: ed.registro.versao }) });
+    abrirRegistro(d.registro, d.resumo);
+    avisar(d.aviso || 'Publicada. O site mostra a página nova em até um minuto.', d.aviso ? '' : 'ok');
+  } catch (e) {
+    avisar('Não consegui publicar: ' + e.message, 'erro');
+  } finally {
+    ocupado(false, bt);
+  }
+}
+
+function abrirEscolhaBloco() {
+  const temTopo = ed.rascunho.blocos.some((b) => tipoDe(b.tipo).topo);
+  $('#dlgBlocosCorpo').innerHTML = vitrineTipos((t) => {
+    const bloqueado = t.topo && temTopo;
+    return `<button type="button" class="tipo-cartao${bloqueado ? ' bloqueado' : ''}" data-novo-bloco="${t.id}" ${bloqueado ? 'disabled' : ''}>
+      ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}</span>
+      <span class="tipo-desc">${bloqueado ? 'A página já tem um bloco de topo.' : esc(t.desc)}</span></button>`;
+  }, (t) => ed.id === 'inicio' || t.id !== 'abertura-servicos');
+  ligarMinis($('#dlgBlocosCorpo'));
+  $('#dlgBlocos').showModal();
+}
+
+// ================================================================ BIBLIOTECA DE BLOCOS
+
+function desenharBiblioteca() {
+  document.title = 'Odisse · Biblioteca de blocos';
+  $('#pagina').innerHTML = `
+    <div class="cabecalho"><h1 class="u-titulo">Biblioteca de blocos</h1><div class="cab-acoes"><span class="u-apoio">${TIPOS.length} blocos</span></div></div>
+    <div class="aviso" id="avisoGeral" hidden></div>
+    ${vitrineTipos((t) => `<div class="tipo-cartao estatico">${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}${t.topo ? ' <span class="etq pessego">topo</span>' : ''}</span>
+      <span class="tipo-desc">${esc(t.desc)}</span>
+      <span class="tipo-campos">${t.campos.map((c) => esc(c.rotulo)).join(' · ')}</span></div>`)}
+    <section class="secao notas">
+      <div><h3 class="u-rotulo">A raiz das páginas</h3><p>Toda landing page do servicos é uma lista destes blocos com os seus textos e imagens. O desenho de cada bloco mora num lugar só (<b>assets/lp/blocos.js</b> e <b>blocos.css</b> no repositório servicos-odisse): mudou ali, mudaram todas as páginas na mesma hora.</p></div>
+      <div><h3 class="u-rotulo">Marca</h3><p>Núcleo Arquitetos: fundo papel, painel areia, véu ardósia, selo Roda; Inter; tinta ardósia. Ocre só nos números grandes e nos marcadores. Os seis pontos laterais acompanham a tela, como no odisse.com.br.</p></div>
+      <div><h3 class="u-rotulo">Bloco novo</h3><p>Um padrão novo (ex.: depoimentos, tabela de preços) entra na biblioteca a pedido, com os campos e o desenho, e fica disponível para todas as páginas.</p></div>
+    </section>`;
+  ligarMinis($('#pagina'));
+}
+
+// ================================================================ MUDANÇAS, SALVAR
+
+function sujo() {
+  if (!ed || !ed.rascunho || !ed.original) return false;
+  if (ed.tipo === 'produto') return ed.novo || !!ed.arquivo || JSON.stringify(ed.rascunho) !== JSON.stringify(ed.original);
+  return JSON.stringify(ed.rascunho) !== JSON.stringify(ed.original);
+}
+
+function marcarMudanca() {
+  const m = sujo();
+  $('#barraSalvar').hidden = !m;
+  document.body.classList.toggle('com-barra', m);
+  $('#barraTexto').textContent = ed?.tipo === 'produto' && ed.novo ? 'Produto novo, ainda não salvo' : ed?.tipo === 'pagina' ? 'Mudanças no rascunho, não salvas' : 'Mudanças não salvas';
+  $('#btSalvar').textContent = ed?.tipo === 'pagina' ? 'Salvar rascunho' : 'Salvar';
+  if (ed?.tipo === 'pagina' && ed.registro && $('#btPublicar')) {
+    const pub = ed.registro.publicado;
+    $('#btPublicar').disabled = !(m || !pub || JSON.stringify(pub) !== JSON.stringify(ed.registro.rascunho));
+  }
+}
+
+function ocupado(sim, bt = $('#btSalvar')) {
+  if (!bt) return;
+  bt.disabled = sim;
+  if (sim) { bt.dataset.texto = bt.textContent; bt.textContent = 'Aguarde…'; } else if (bt.dataset.texto) bt.textContent = bt.dataset.texto;
+}
+
+const salvar = () => (ed?.tipo === 'produto' ? salvarProduto() : ed?.tipo === 'pagina' ? salvarPagina() : null);
+
+// ================================================================ EVENTOS
+
+function moverEm(lista, i, passo) {
+  const j = i + passo;
+  if (j < 0 || j >= lista.length) return;
+  [lista[i], lista[j]] = [lista[j], lista[i]];
+}
+
+function redesenharMantendo() {
+  const y = scrollY;
+  if (ed.tipo === 'pagina') { desenharEditor(); } else desenharFicha();
+  scrollTo(0, y);
+}
+
+let alvoImagem = null;
 
 function ligar() {
   $('#formEntrada').addEventListener('submit', (e) => { e.preventDefault(); entrar($('#senha').value, false); });
-  $('#btSair').addEventListener('click', () => sair());
-
-  $('#selSituacao').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-v]'); if (!b) return;
-    filtros.situacao = b.dataset.v; guardar(CHAVE_FILTROS, { situacao: filtros.situacao, trilho: filtros.trilho }); desenhar();
-  });
-  $('#selTrilho').addEventListener('click', (e) => {
-    const b = e.target.closest('button[data-v]'); if (!b) return;
-    filtros.trilho = b.dataset.v; guardar(CHAVE_FILTROS, { situacao: filtros.situacao, trilho: filtros.trilho }); desenhar();
-  });
-  $('#busca').addEventListener('input', (e) => { filtros.busca = e.target.value; desenharSeletores(); desenharLista(); });
-  $('#btLimpar').addEventListener('click', () => {
-    filtros = { situacao: 'todos', trilho: 'todos', busca: '' }; $('#busca').value = ''; guardar(CHAVE_FILTROS, filtros); desenhar();
-  });
-
-  $('#btNovo').addEventListener('click', () => abrirGaveta(null));
-
-  $('#lista').addEventListener('click', (e) => {
-    const mv = e.target.closest('[data-mover]');
-    const linha = e.target.closest('.linha');
-    if (!linha) return;
-    if (mv) { e.stopPropagation(); mover(linha.dataset.id, Number(mv.dataset.mover)); return; }
-    if (getSelection().toString()) return;
-    abrirGaveta(linha.dataset.id);
-  });
-  $('#lista').addEventListener('keydown', (e) => {
-    const linha = e.target.closest('.linha');
-    if (linha && e.target === linha && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); abrirGaveta(linha.dataset.id); }
-  });
-
-  // gaveta
-  $('#gavFechar').innerHTML = IC.fechar;
-  $('#gavFechar').addEventListener('click', () => fecharGaveta());
-  $('#gavetaFundo').addEventListener('click', () => fecharGaveta());
+  $('#btSair').addEventListener('click', () => { if (!sujo() || confirm('Há mudanças não salvas. Sair assim mesmo?')) sair(); });
+  $('#btSalvar').addEventListener('click', salvar);
   $('#btDescartar').addEventListener('click', () => {
-    if (aberto.novo) return fecharGaveta(true);
-    aberto.rascunho = copiar(aberto.original); aberto.arquivo = null; desenharGaveta();
+    if (!ed) return;
+    if (ed.tipo === 'produto' && ed.novo) { ed = null; marcarMudanca(); location.hash = '#/'; return; }
+    ed.rascunho = copiar(ed.original); ed.arquivo = null;
+    redesenharMantendo();
   });
-  $('#btSalvar').addEventListener('click', salvarGaveta);
   document.addEventListener('keydown', (e) => {
-    if (!aberto) return;
-    if (e.key === 'Escape') { e.preventDefault(); fecharGaveta(); }
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); if (mudou()) salvarGaveta(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && sujo()) { e.preventDefault(); salvar(); }
   });
+  addEventListener('beforeunload', (e) => { if (sujo()) { e.preventDefault(); e.returnValue = ''; } });
 
-  const form = $('#gavForm');
-  const PUB = new Set(['titulo', 'texto', 'chamada', 'link']);
-  form.addEventListener('input', (e) => {
-    const el = e.target; if (!el.name || !aberto) return;
-    const p = aberto.rascunho;
-    if (el.name === 'noSite') p.noSite = el.checked;
-    else if (PUB.has(el.name)) p.publico[el.name] = el.value;
-    else p[el.name] = el.value;
-    if (el.name === 'nome') $('#gavTitulo').textContent = el.value || 'Sem nome';
-    const conta = form.querySelector(`[data-conta="${el.name}"]`);
-    if (conta && el.maxLength > 0) { conta.textContent = `${el.value.length} / ${el.maxLength}`; conta.classList.toggle('passou', el.value.length >= el.maxLength); }
-    if (PUB.has(el.name)) form.querySelector('.previa-gav').innerHTML = cartaoSite(p.publico);
+  const pag = $('#pagina');
+
+  // digitação: grava no rascunho pelo caminho do campo
+  pag.addEventListener('input', (e) => {
+    const el = e.target.closest('[data-c]');
+    if (!el || !ed) return;
+    const c = el.dataset.c;
+    const v = el.type === 'checkbox' ? el.checked : el.value;
+    porCaminho(c, c === 'p.slug' ? v.toLowerCase().trim() : v);
+    const contador = el.closest('.u-campo')?.querySelector('[data-conta]');
+    if (contador && el.maxLength > 0) { contador.textContent = `${el.value.length} / ${el.maxLength}`; contador.classList.toggle('passou', el.value.length >= el.maxLength); }
+    if (ed.tipo === 'produto') {
+      if (c === 'pr.nome') { $('#tituloPagina').textContent = v || 'Produto novo'; $('#trilhaNome').textContent = v || 'Produto novo'; }
+      if (c.startsWith('pr.publico.')) $('#previaCartao').innerHTML = cartaoSite(ed.rascunho.publico);
+    } else {
+      const bl = el.closest('.bloco-lp');
+      if (bl && /\.(titulo|rotulo)$/.test(c)) {
+        const uidB = bl.dataset.bloco.slice(2);
+        const b = ed.rascunho.blocos.find((x) => x.uid === uidB);
+        const sm = bl.querySelector('.bloco-alterna small');
+        if (b && sm) sm.textContent = resumoBloco(b);
+      }
+    }
     marcarMudanca();
   });
-  form.addEventListener('click', (e) => {
-    const cab = e.target.closest('.bloco-cab');
-    if (cab) {
-      const b = cab.closest('.bloco'); b.classList.toggle('fechado');
-      cab.setAttribute('aria-expanded', !b.classList.contains('fechado'));
-      blocosFechados[b.dataset.bloco] = b.classList.contains('fechado'); guardar(CHAVE_BLOCOS, blocosFechados);
+
+  pag.addEventListener('click', async (e) => {
+    // recolher / abrir Bloco
+    const alt = e.target.closest('.bloco-alterna, [data-alterna]');
+    if (alt) { alternarBloco(alt.closest('.bloco')); return; }
+    const todos = e.target.closest('[data-todos]');
+    if (todos) {
+      const fechar = todos.dataset.todos === 'fechar';
+      document.querySelectorAll('.bloco-lp').forEach((b) => { if (b.classList.contains('fechado') !== fechar) alternarBloco(b); });
       return;
     }
-    const sel = e.target.closest('.seletor[data-campo] button[data-v]');
+    if (!ed) return;
+    // Seletor da situação (produto)
+    const sel = e.target.closest('[data-seletor] button[data-v]');
     if (sel) {
-      aberto.rascunho[sel.parentElement.dataset.campo] = sel.dataset.v;
+      porCaminho(sel.parentElement.dataset.seletor, sel.dataset.v);
       sel.parentElement.querySelectorAll('button').forEach((b) => b.setAttribute('aria-checked', b === sel));
-      marcarMudanca();
+      marcarMudanca(); return;
+    }
+    const usar = e.target.closest('[data-usar-link]');
+    if (usar) { ed.rascunho.publico.link = usar.dataset.usarLink; redesenharMantendo(); return; }
+    if (e.target.closest('[data-capa]')) { alvoImagem = { capa: true }; $('#arqImagem').click(); return; }
+    if (e.target.closest('[data-tirar-capa]')) { ed.rascunho.publico.imagem = null; ed.arquivo = null; redesenharMantendo(); return; }
+    if (e.target.closest('[data-arquivar]')) {
+      if (!confirm('Arquivar este produto? Ele sai do grid e da lista principal (fica em Arquivados).')) return;
+      ed.rascunho.situacao = 'arquivado'; salvarProduto(); return;
+    }
+    // imagens dos blocos
+    const im = e.target.closest('[data-imagem]');
+    if (im) { alvoImagem = { caminho: im.dataset.imagem, formato: im.dataset.formato, bt: im }; $('#arqImagem').click(); return; }
+    const tirar = e.target.closest('[data-tirar-imagem]');
+    if (tirar) { porCaminho(tirar.dataset.tirarImagem, null); redesenharMantendo(); return; }
+    // itens de listas (↑ ↓ × + Acrescentar)
+    const it = e.target.closest('[data-item]');
+    if (it) {
+      const caminho = it.dataset.lista;
+      const lista = lerCaminho(caminho);
+      if (!Array.isArray(lista)) return;
+      const i = Number(it.dataset.i);
+      if (it.dataset.item === 'sobe') moverEm(lista, i, -1);
+      if (it.dataset.item === 'desce') moverEm(lista, i, 1);
+      if (it.dataset.item === 'tira') lista.splice(i, 1);
+      if (it.dataset.item === 'mais') {
+        const [, uidB, campoId] = caminho.split('.');
+        const tipo = tipoDe(ed.rascunho.blocos.find((b) => b.uid === uidB)?.tipo);
+        const def = tipo?.campos.find((c) => c.id === campoId);
+        lista.push(def?.tipo === 'lista' ? Object.fromEntries(def.campos.map((s) => [s.id, s.tipo === 'imagem' ? null : ''])) : '');
+      }
+      redesenharMantendo();
+      if (it.dataset.item === 'mais') {
+        const ultimo = [...document.querySelectorAll(`[data-c^="${CSS.escape(caminho)}."]`)].pop();
+        ultimo?.focus();
+      }
       return;
     }
-    const acao = e.target.closest('[data-acao]')?.dataset.acao;
-    if (acao === 'imagem') $('#arqImagem').click();
-    if (acao === 'tirar-imagem') { aberto.rascunho.publico.imagem = null; aberto.arquivo = null; desenharGaveta(); }
-    if (acao === 'arquivar') {
-      aberto.rascunho.situacao = 'arquivado';
-      salvarGaveta();
+    // blocos da página (↑ ↓ ×)
+    const ba = e.target.closest('[data-bloco-acao]');
+    if (ba) {
+      const lista = ed.rascunho.blocos;
+      const i = lista.findIndex((b) => b.uid === ba.dataset.uid);
+      if (ba.dataset.blocoAcao === 'tira') {
+        if (!confirm(`Tirar o bloco “${tipoDe(lista[i].tipo).nome}” desta página? (Só some de vez ao salvar.)`)) return;
+        lista.splice(i, 1);
+      } else moverEm(lista, i, ba.dataset.blocoAcao === 'sobe' ? -1 : 1);
+      redesenharMantendo();
+      return;
     }
-  });
-  form.addEventListener('change', async (e) => {
-    if (e.target.id !== 'arqImagem') return;
-    const arq = e.target.files?.[0]; if (!arq) return;
-    aberto.arquivo = arq;
-    const dataUrl = await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(arq); });
-    aberto.rascunho.publico.imagem = { dataUrl };
-    desenharGaveta();
+    if (e.target.closest('#btMaisBloco')) abrirEscolhaBloco();
   });
 
-  window.addEventListener('beforeunload', (e) => { if (mudou()) { e.preventDefault(); e.returnValue = ''; } });
+  // escolher bloco novo
+  const dlg = $('#dlgBlocos');
+  dlg.querySelector('[data-fechar]').innerHTML = IC.fechar;
+  dlg.addEventListener('click', (e) => {
+    if (e.target === dlg || e.target.closest('[data-fechar]')) { dlg.close(); return; }
+    const n = e.target.closest('[data-novo-bloco]');
+    if (!n || !ed?.rascunho) return;
+    const b = novoBloco(n.dataset.novoBloco);
+    if (tipoDe(b.tipo).topo) ed.rascunho.blocos.unshift(b); else ed.rascunho.blocos.push(b);
+    dlg.close();
+    desenharEditor();
+    const el = document.querySelector(`[data-bloco="b-${b.uid}"]`);
+    if (el?.classList.contains('fechado')) alternarBloco(el);
+    el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // arquivo de imagem (capa do produto ou campo de bloco)
+  $('#arqImagem').addEventListener('change', async (e) => {
+    const arq = e.target.files?.[0];
+    e.target.value = '';
+    if (!arq || !ed || !alvoImagem) return;
+    const a = alvoImagem; alvoImagem = null;
+    if (a.capa) {
+      ed.arquivo = arq;
+      ed.rascunho.publico.imagem = { dataUrl: await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(arq); }) };
+      redesenharMantendo();
+      return;
+    }
+    if (a.bt) { a.bt.disabled = true; a.bt.textContent = 'Enviando…'; }
+    try {
+      const max = a.formato === 'paisagem' || a.formato === 'faixa' ? 2400 : 1600;
+      porCaminho(a.caminho, await enviarImagem(arq, `lp-${ed.rascunho.slug || 'pagina'}`, max));
+      redesenharMantendo();
+    } catch (err) {
+      avisar('Não consegui enviar a imagem: ' + err.message, 'erro');
+      if (a.bt) { a.bt.disabled = false; a.bt.textContent = 'Enviar imagem'; }
+    }
+  });
 }
 
 ligar();

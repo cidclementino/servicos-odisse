@@ -14,13 +14,15 @@
 </head>
 <body class="u-pagina vista-login">
   <header class="topo">
-    <a class="topo-casa" href="./">
+    <a class="topo-casa" href="#/">
       <span class="topo-selo" aria-hidden="true"></span>
       <span class="topo-logotipo" role="img" aria-label="Odisse"></span>
       <span class="topo-sub">Serviços</span>
     </a>
-    <nav class="topo-secoes" aria-label="Seções do painel">
-      <a href="./" class="ativo">Catálogo</a>
+    <nav class="topo-secoes" id="secoes" aria-label="Seções do painel">
+      <a href="#/" data-secao="catalogo">Catálogo</a>
+      <a href="#/inicio" data-secao="inicio">Página inicial</a>
+      <a href="#/blocos" data-secao="blocos">Blocos</a>
     </nav>
     <div class="topo-acoes">
       <a class="topo-link" href="/inicio/" target="_blank" rel="noopener">Ver o site</a>
@@ -40,71 +42,28 @@
     </form>
   </main>
 
-  <!-- ===================== CATÁLOGO ===================== -->
-  <main class="pagina" id="pagina" hidden>
-    <div class="cabecalho">
-      <h1 class="u-titulo">Catálogo de serviços</h1>
-      <div class="cab-acoes">
-        <span class="u-apoio" id="atualizado"></span>
-        <button class="u-botao forte" id="btNovo" type="button">+ Novo produto</button>
-      </div>
+  <!-- ===================== PÁGINAS (desenhadas pelo painel.js conforme o endereço) ===================== -->
+  <main class="pagina" id="pagina" hidden></main>
+
+  <!-- Barra de salvar (Ficha do produto e montador da landing page) -->
+  <div class="barra-salvar" id="barraSalvar" hidden>
+    <span id="barraTexto">Mudanças não salvas</span>
+    <div>
+      <button class="u-botao" id="btDescartar" type="button">Descartar</button>
+      <button class="u-botao forte" id="btSalvar" type="button">Salvar</button>
     </div>
+  </div>
 
-    <div class="filtros">
-      <div class="seletor" id="selSituacao" role="radiogroup" aria-label="Situação"></div>
-      <div class="seletor" id="selTrilho" role="radiogroup" aria-label="Trilho"></div>
-      <label class="busca"><input type="search" id="busca" placeholder="Buscar" aria-label="Buscar produto"></label>
-      <button class="limpar" id="btLimpar" type="button" hidden>limpar</button>
+  <!-- Escolher bloco (montador) -->
+  <dialog class="dialogo" id="dlgBlocos" aria-labelledby="dlgBlocosTitulo">
+    <div class="dlg-cab">
+      <h2 class="u-subtitulo" id="dlgBlocosTitulo">Acrescentar bloco</h2>
+      <button class="caixa" type="button" data-fechar aria-label="Fechar"></button>
     </div>
+    <div class="dlg-corpo" id="dlgBlocosCorpo"></div>
+  </dialog>
 
-    <div class="aviso" id="avisoGeral" hidden></div>
-
-    <div class="regua" aria-hidden="true">
-      <span>Produto</span><span>Trilho</span><span>Degrau</span><span>Situação</span><span>No site</span><span></span>
-    </div>
-    <div class="registro" id="lista"></div>
-
-    <section class="secao">
-      <h2 class="u-subtitulo">Grid no site</h2>
-      <div class="grid-previa" id="gridPrevia"></div>
-    </section>
-
-    <section class="secao notas">
-      <div>
-        <h3 class="u-rotulo">Como o grid se forma</h3>
-        <p>Entra no grid de serviços da página <a href="/inicio/" target="_blank" rel="noopener">/inicio/</a> todo produto <b>no ar</b>, marcado para aparecer no site, com título e link. A ordem do grid é a ordem desta lista (setas à direita de cada linha). O site lê o catálogo a cada visita, com até um minuto de atraso.</p>
-      </div>
-      <div>
-        <h3 class="u-rotulo">Trilhos e degraus</h3>
-        <p><b>Trilho</b> é para quem o produto é: cliente final, corretores, construtoras e incorporadoras, escritórios. <b>Degrau</b> é a posição no caminho até o contrato: entrada (grátis), pago leve ou contrato (o serviço principal). Material só para parceiros fica fora do grid.</p>
-      </div>
-      <div>
-        <h3 class="u-rotulo">Nada se apaga</h3>
-        <p>Produto que saiu dos planos vai para <b>Arquivados</b>. Cada gravação guarda o catálogo anterior (as 20 últimas versões ficam no servidor).</p>
-      </div>
-    </section>
-  </main>
-
-  <!-- ===================== GAVETA ===================== -->
-  <div class="gaveta-fundo" id="gavetaFundo" hidden></div>
-  <aside class="gaveta" id="gaveta" aria-labelledby="gavTitulo" hidden>
-    <div class="gav-cab">
-      <div>
-        <span class="u-rotulo" id="gavRotulo">Produto</span>
-        <h2 class="u-subtitulo" id="gavTitulo"></h2>
-      </div>
-      <button class="caixa" id="gavFechar" type="button" aria-label="Fechar"></button>
-    </div>
-    <form class="gav-corpo" id="gavForm" autocomplete="off"></form>
-    <div class="barra-salvar" id="barraSalvar" hidden>
-      <span id="barraTexto">Mudanças não salvas</span>
-      <div>
-        <button class="u-botao" id="btDescartar" type="button">Descartar</button>
-        <button class="u-botao forte" id="btSalvar" type="button">Salvar</button>
-      </div>
-    </div>
-  </aside>
-
+  <input type="file" accept="image/*" id="arqImagem" hidden>
   <script type="module" src="painel.js"></script>
 </body>
 </html>

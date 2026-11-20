@@ -10,3 +10,7 @@ kv_namespaces = [
 ]
 
 # A senha do painel (SERVICOS_SENHA) é enviada pelo GitHub Actions — nunca coloque o valor aqui.
+
+[vars]
+# repositório onde o Worker cria a casca das landing pages novas (com o secret SERVICOS_GITHUB_TOKEN)
+GITHUB_REPO = "cidclementino/servicos-odisse"

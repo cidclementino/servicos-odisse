@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{%- assign reserva = site.data.paginas[page.pagina] %}
+<title>{{ reserva.titulo | default: page.title | default: "Odisse Arquitetos" }}</title>
+<meta name="description" content="{{ reserva.descricao | default: page.description | escape }}">
+{% if page.noindex %}<meta name="robots" content="noindex">{% else %}<link rel="canonical" href="https://servicos.odisse.com.br{{ page.url }}">{% endif %}
+<link rel="icon" href="https://marca.odisse.com.br/favicon/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/images/apple-touch-icon.png">
+{% include analytics.html %}
+<link rel="preconnect" href="https://servicos-odisse.reservaprojectbasework.workers.dev" crossorigin>
+<link rel="stylesheet" href="https://marca.odisse.com.br/v1/marca.css">
+<link rel="stylesheet" href="/assets/lp/blocos.css?v={{ site.time | date: '%s' }}">
+<script src="/assets/config.js"></script>
+<script type="module" src="/assets/lp/pagina.js?v={{ site.time | date: '%s' }}"></script>
+</head>
+<body class="lp">
+{%- comment -%}
+  Casca de uma landing page. O desenho mora na biblioteca de blocos (assets/lp/blocos.js + blocos.css);
+  o conteúdo vem da API (montado no painel: servicos.odisse.com.br/painel/). A reserva abaixo (de
+  _data/paginas/<endereço>.json) só aparece se a API não responder na primeira visita.
+{%- endcomment %}
+<main id="lp" class="lp-carregando" data-pagina="{{ page.pagina }}"></main>
+{% if reserva %}<script type="application/json" id="lp-reserva">{{ reserva | jsonify }}</script>{% endif %}
+</body>
+</html>

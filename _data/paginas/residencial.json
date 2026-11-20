@@ -1,0 +1,293 @@
+{
+ "slug": "residencial",
+ "titulo": "Odisse Arquitetos — Projetos Residenciais",
+ "descricao": "Projeto de arquitetura residencial do conceito à obra, com o Odisse, Estúdio de Arquitetura e Design, em João Pessoa e em todo o Brasil.",
+ "formulario": "/formulario-residencial/",
+ "chamada": "Quero Solicitar um Orçamento",
+ "whatsapp": true,
+ "textoWhatsapp": "Quero Falar no WhatsApp",
+ "blocos": [
+  {
+   "uid": "abe001",
+   "tipo": "abertura",
+   "dados": {
+    "imagem": {
+     "caminho": "/residencial/images/odisse-obras-005.jpg"
+    },
+    "titulo": "Uma casa pensada pra ser sua. Projetada com atenção a cada detalhe, do conceito à obra.",
+    "texto": "Combinamos rigor técnico, sensibilidade artística e leitura de contexto para famílias que não buscam apenas metros quadrados, mas uma casa com identidade própria.",
+    "prova": [
+     {
+      "valor": "+100.000 m²",
+      "complemento": "projetados"
+     },
+     {
+      "valor": "+50 projetos",
+      "complemento": ""
+     },
+     {
+      "valor": "5 anos",
+      "complemento": "de atuação"
+     }
+    ],
+    "nota": "Resposta em até 1 dia útil."
+   }
+  },
+  {
+   "uid": "ite001",
+   "tipo": "itens-numerados",
+   "dados": {
+    "rotulo": "O diferencial",
+    "titulo": "Cada projeto, um mundo próprio",
+    "texto": "Não trabalhamos com fórmulas prontas nem com análises de contexto estereotipadas. Cada residência nasce do encontro entre o terreno que você ocupa, a sua história e o modo como pretende viver daqui pra frente. O resultado: uma casa com identidade própria — enraizada no seu contexto, construída para durar e valorizar o que você investiu nela.",
+    "itens": [
+     {
+      "titulo": "Rigor técnico",
+      "texto": "Projetos executivos completos, do conceito à obra — com o seu orçamento sob controle em cada etapa."
+     },
+     {
+      "titulo": "Leitura de contexto",
+      "texto": "Terreno, entorno e o seu modo de viver — analisados antes de qualquer traço."
+     },
+     {
+      "titulo": "Sensibilidade artística",
+      "texto": "Mais do que uma solução: arquitetura como linguagem que expressa quem você é."
+     }
+    ],
+    "botoes": true
+   }
+  },
+  {
+   "uid": "pro001",
+   "tipo": "projetos",
+   "dados": {
+    "rotulo": "Projetos",
+    "titulo": "Projetos que já ganharam forma",
+    "texto": "Uma seleção do que já criamos em diferentes lugares do país.",
+    "projetos": [
+     {
+      "imagem": {
+       "caminho": "/residencial/images/residencia-yvc.jpg"
+      },
+      "nome": "Residência YVC",
+      "local": "João Pessoa, PB",
+      "area": "480 m²",
+      "tipo": "",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/residencial/images/residencia-dcmcc.jpg"
+      },
+      "nome": "Residência DCMCC",
+      "local": "João Pessoa, PB",
+      "area": "1.110 m²",
+      "tipo": "",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/residencial/images/residencia-altavista.jpg"
+      },
+      "nome": "Residência Altavista",
+      "local": "João Pessoa, PB",
+      "area": "520 m²",
+      "tipo": "",
+      "sintese": ""
+     },
+     {
+      "imagem": {
+       "caminho": "/residencial/images/residencia-faf.jpg"
+      },
+      "nome": "Residência FAF",
+      "local": "Bananeiras, PB",
+      "area": "240 m²",
+      "tipo": "",
+      "sintese": ""
+     }
+    ],
+    "chamada": "Quero Solicitar um Orçamento",
+    "botoes": true
+   }
+  },
+  {
+   "uid": "ite002",
+   "tipo": "itens-numerados",
+   "dados": {
+    "rotulo": "Como trabalhamos",
+    "titulo": "Do conceito à obra, em quatro passos.",
+    "texto": "Cada projeto passa por um processo com começo, meio e entrega definidos. Você aprova cada etapa antes de avançarmos para a próxima — sem surpresas no caminho.",
+    "itens": [
+     {
+      "titulo": "Conceito",
+      "texto": "Entendemos o terreno, as necessidades da sua família e o modo de viver de quem vai habitar a casa. Você já acompanha os primeiros estudos e volumes — a forma da residência começa a aparecer diante de você."
+     },
+     {
+      "titulo": "Projeto Legal",
+      "texto": "Documentação técnica completa para aprovação junto à prefeitura e aos órgãos competentes."
+     },
+     {
+      "titulo": "Projeto Executivo",
+      "texto": "Detalhamento técnico completo — plantas, cortes, fachadas e memorial descritivo — com cronograma definido junto com você, pronto para a obra."
+     },
+     {
+      "titulo": "Acompanhamento",
+      "texto": "Suporte técnico durante a execução, com visitas à obra até a entrega."
+     }
+    ],
+    "botoes": true
+   }
+  },
+  {
+   "uid": "esc001",
+   "tipo": "escopo",
+   "dados": {
+    "rotulo": "Escopo",
+    "titulo": "O que você recebe",
+    "texto": "Um serviço completo, sem lacunas entre o projeto e a obra:",
+    "itens": [
+     "Projeto do conceito à execução",
+     "Acompanhamento da aprovação junto à prefeitura",
+     "Compatibilização com projetos complementares (elétrico, hidráulico, estrutural) — resolvido no papel, antes da obra começar.",
+     "Suporte técnico até a entrega da obra"
+    ],
+    "imagem": {
+     "caminho": "/residencial/images/escopo-documentacao-tecnica.jpg"
+    },
+    "botoes": false
+   }
+  },
+  {
+   "uid": "tex001",
+   "tipo": "texto-imagens",
+   "dados": {
+    "rotulo": "Do papel à obra",
+    "titulo": "Acompanhamos até o último detalhe ser erguido",
+    "texto": "Um projeto não termina na entrega das plantas. Continuamos presentes durante toda a execução, com suporte técnico à construtora e à equipe de obra, seja esclarecendo dúvidas, seja em visitas técnicas à obra, para que o projeto tenha o suporte necessário para se tornar realidade como foi desenhado.",
+    "imagens": [
+     {
+      "imagem": {
+       "caminho": "/residencial/images/odisse-obras-001.jpg"
+      },
+      "legenda": "Obra em execução, Mata Redonda, PB"
+     },
+     {
+      "imagem": {
+       "caminho": "/residencial/images/odisse-obras-002.jpg"
+      },
+      "legenda": "Visita técnica nas obras da Residência DCMCC"
+     }
+    ],
+    "botoes": false
+   }
+  },
+  {
+   "uid": "per001",
+   "tipo": "perguntas",
+   "dados": {
+    "rotulo": "Dúvidas frequentes",
+    "titulo": "Perguntas antes de começar",
+    "texto": "Se ficou alguma dúvida sobre como funciona, respondemos as mais comuns abaixo. Para outras dúvidas que não tenham sido respondidas, é só chamar no WhatsApp.",
+    "perguntas": [
+     {
+      "pergunta": "Quanto custa um projeto de arquitetura residencial?",
+      "resposta": "O valor de um projeto residencial varia conforme a metragem, a complexidade e a fase de execução da obra (Projeto Legal, Executivo, ou os dois). Fazemos um orçamento personalizado a partir de uma conversa inicial sobre o seu terreno e o que você tem em mente — sem custo nessa etapa.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Quanto tempo leva um projeto residencial, do conceito à obra?",
+      "resposta": "Cada projeto tem um cronograma próprio, definido conforme a complexidade e a fase contratada. O que garantimos é um processo com etapas claras — Conceito, Projeto Legal, Projeto Executivo e Acompanhamento — sem surpresas de prazo pelo caminho. Detalhamos o cronograma específico já na proposta.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "O Odisse atende só em João Pessoa, ou projetos em outras cidades também?",
+      "resposta": "Atendemos residências em todo o Brasil. O processo de projeto — conceito, desenvolvimento e aprovação — funciona remotamente com a mesma qualidade e proximidade, independente de onde o terreno esteja. A única etapa com abrangência específica é a visita presencial durante a obra.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Preciso já ter o terreno definido para começar?",
+      "resposta": "Não necessariamente. Se você já tem o terreno, começamos pela leitura do contexto e do programa da família. Se ainda está avaliando um imóvel ou terreno, também podemos ajudar a entender o potencial construtivo antes da compra.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "O projeto já inclui a aprovação na prefeitura?",
+      "resposta": "Sim. O acompanhamento da aprovação junto à prefeitura e aos órgãos competentes faz parte do escopo do Projeto Legal — você não precisa correr atrás disso sozinho.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Vocês só fazem o projeto, ou acompanham a obra também?",
+      "resposta": "Acompanhamos. Depois da entrega do Projeto Executivo, seguimos com suporte técnico durante a execução — para garantir que o que foi desenhado seja exatamente o que é construído. O acompanhamento presencial, com visitas técnicas à obra, está disponível para projetos na Região Metropolitana de João Pessoa, Campina Grande e Bananeiras. Casos fora dessa área podem ser avaliados pontualmente, mediante análise de viabilidade. Para as demais localidades, o acompanhamento é remoto: seguimos à disposição da equipe que está executando a obra para esclarecer dúvidas técnicas, sem visita presencial ao canteiro.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "O Odisse também projeta reforma, ou só construção nova?",
+      "resposta": "Trabalhamos tanto com projetos de residências novas quanto com reformas e ampliações. A abordagem — leitura do terreno ou do espaço existente, depois conceito, depois execução — é a mesma nos dois casos.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Quem vai conduzir o meu projeto?",
+      "resposta": "Cid Clementino e Nathalia Linhares acompanham pessoalmente cada projeto residencial, do primeiro traço à entrega da obra — não é repassado para uma equipe terceirizada no meio do caminho.",
+      "link": "",
+      "botao": ""
+     },
+     {
+      "pergunta": "Preencher o formulário já é um compromisso, ou posso só entender melhor como funciona?",
+      "resposta": "Não. É só um primeiro contato. A partir das suas respostas, entendemos sua demanda e retornamos o contato por ligação, WhatsApp ou e-mail — você escolhe a forma que preferir no formulário — e, se fizer sentido para todos, seguimos para uma proposta.",
+      "link": "",
+      "botao": ""
+     }
+    ]
+   }
+  },
+  {
+   "uid": "aut001",
+   "tipo": "autoria",
+   "dados": {
+    "imagem": {
+     "caminho": "/residencial/images/odisse-arquitetos-003.jpg"
+    },
+    "rotulo": "Autoria",
+    "titulo": "Os Arquitetos",
+    "texto": "Cid Clementino e Nathalia Linhares conduzem pessoalmente cada projeto residencial, do primeiro traço à entrega da obra. Ambos são arquitetos e urbanistas formados pela Universidade Federal da Paraíba e coordenam o Odisse, Estúdio de Arquitetura e Design (CAU PJ 670011). Juntos, já assinaram mais de 50 projetos — de reformas e ambientações a residências e edifícios institucionais, como a sede administrativa da VRV. Cid é coordenador criativo do estúdio, com experiência em consultoria arquitetônica para incorporadoras; Nathalia é coordenadora executiva, com passagem pela gestão de projeto e obra em reformas de condomínios residenciais verticais. Em 2023, o Odisse participou da CASACOR Paraíba, onde recebeu o prêmio de Melhor Uso de Materiais Inovadores e foi finalista do Prêmio Salão Design.",
+    "nomes": "CID CLEMENTINO · NATHALIA LINHARES"
+   }
+  },
+  {
+   "uid": "num001",
+   "tipo": "numeros",
+   "dados": {
+    "itens": [
+     {
+      "valor": "+100.000 m²",
+      "legenda": "de arquitetura projetada"
+     },
+     {
+      "valor": "+50 projetos",
+      "legenda": "entregues"
+     },
+     {
+      "valor": "5 anos",
+      "legenda": "de atuação contínua"
+     }
+    ]
+   }
+  },
+  {
+   "uid": "cha001",
+   "tipo": "chamada-final",
+   "dados": {
+    "rotulo": "Comece agora",
+    "titulo": "Vamos começar seu projeto?",
+    "texto": "Preencha o formulário com informações sobre o projeto de sua residência e retornaremos o contato em até 1 dia útil.",
+    "chamada": "Quero Solicitar um Orçamento"
+   }
+  }
+ ]
+}

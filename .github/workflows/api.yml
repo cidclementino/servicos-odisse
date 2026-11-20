@@ -3,7 +3,8 @@ name: Publicar API (Cloudflare Worker)
 on:
   push:
     branches: [main]
-    paths: ['worker/**', '.github/workflows/api.yml']
+    # a API usa a biblioteca de blocos (limpeza das páginas) e as páginas que já existiam (sementes)
+    paths: ['worker/**', 'assets/lp/blocos.js', '_data/paginas/**', '.github/workflows/api.yml']
   workflow_dispatch:
 
 jobs:
@@ -13,6 +14,7 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       SERVICOS_SENHA: ${{ secrets.SERVICOS_SENHA }}
+      SERVICOS_GITHUB_TOKEN: ${{ secrets.SERVICOS_GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -49,3 +51,9 @@ jobs:
           W="$RUNNER_TEMP/wr/node_modules/.bin/wrangler"
           "$W" deploy
           printf '%s' "$SERVICOS_SENHA" | "$W" secret put SERVICOS_SENHA
+          # opcional: token do GitHub (só Contents: write neste repositório) para criar a casca das páginas novas
+          if [ -n "$SERVICOS_GITHUB_TOKEN" ]; then
+            printf '%s' "$SERVICOS_GITHUB_TOKEN" | "$W" secret put SERVICOS_GITHUB_TOKEN
+          else
+            echo "::notice::Sem SERVICOS_GITHUB_TOKEN: páginas novas ficam em /lp/?p=<endereço> até a casca ser criada."
+          fi
