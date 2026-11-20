@@ -1,1 +1,5 @@
 theme: null
+exclude:
+  - worker
+  - README.md
+  - tools

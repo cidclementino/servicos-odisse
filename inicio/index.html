@@ -42,7 +42,7 @@ title: "Odisse Arquitetos — Projetos"
   .hub-cards-grid{
     flex:1;
     display:grid;
-    grid-template-columns:1fr 1fr 1fr;
+    grid-template-columns:repeat(var(--colunas, 3), 1fr);
     gap:clamp(16px, 2vw, 40px);
     min-height:0;
   }
@@ -108,6 +108,13 @@ title: "Odisse Arquitetos — Projetos"
     gap:8px;
   }
   .hub-card-cta .arrow{ transition:transform 0.2s ease; }
+  /* sem imagem: fundo ardósia, sem véu escuro */
+  .hub-card.sem-imagem{ background:var(--slate); }
+  .hub-card.sem-imagem .hub-card-overlay{ background:linear-gradient(180deg, rgba(26,26,26,0) 0%, rgba(26,26,26,0.35) 100%); }
+  /* 5 ou mais serviços: o grid deixa de ocupar só a primeira tela e vira linhas de cartões 4:5 */
+  .hub-cards-grid.muitos{ grid-template-columns:repeat(3, 1fr); }
+  .hub-cards-grid.muitos .hub-card{ height:auto; aspect-ratio:4/5; }
+  .hub-cards-section:has(.muitos){ flex:none; }
   .hub-card:hover .hub-card-cta .arrow{ transform:translateX(3px); }
 
   /* ---------- FAQ CTA (botão dentro de cada resposta) ---------- */
@@ -120,7 +127,7 @@ title: "Odisse Arquitetos — Projetos"
     .hub-hero-grid{ max-width:100%; }
     .hub-cards-section{ display:block; padding:0 0 64px; }
     .hub-cards-section .frame{ display:block; }
-    .hub-cards-grid{ grid-template-columns:1fr; }
+    .hub-cards-grid, .hub-cards-grid.muitos{ grid-template-columns:1fr; }
     .hub-card{ height:auto; aspect-ratio:1/1; }
   }
 </style>
@@ -137,7 +144,9 @@ title: "Odisse Arquitetos — Projetos"
 
 <section class="hub-cards-section">
   <div class="frame">
-    <div class="hub-cards-grid">
+    <!-- Os cartões abaixo são a reserva (do _data/inicio_conteudo.yml). Com a API no ar, o grid vem do
+         catálogo do painel (servicos.odisse.com.br/painel/): só os produtos no ar e marcados para o site. -->
+    <div class="hub-cards-grid" id="gridServicos" style="--colunas:{{ site.data.inicio_conteudo.cards | size }}">
       {% for card in site.data.inicio_conteudo.cards %}
       {% assign card_img = card.imagem %}
       <a href="{{ card.link }}" class="hub-card">
@@ -267,3 +276,6 @@ title: "Odisse Arquitetos — Projetos"
 </section>
 
 </div><!-- /dark-band -->
+
+<script src="/assets/config.js"></script>
+<script src="/assets/servicos.js"></script>

@@ -1,0 +1,12 @@
+name = "servicos-odisse"
+main = "index.js"
+compatibility_date = "2026-07-01"
+
+# Namespace KV "SERVICOS_ODISSE". O workflow "Publicar API" cria o namespace
+# na primeira publicação (se ainda não existir) e troca o marcador abaixo
+# pelo id verdadeiro antes de publicar — não é preciso editar nada aqui.
+kv_namespaces = [
+  { binding = "SERVICOS", id = "__KV_ID__" },
+]
+
+# A senha do painel (SERVICOS_SENHA) é enviada pelo GitHub Actions — nunca coloque o valor aqui.
