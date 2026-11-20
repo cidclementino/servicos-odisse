@@ -1,6 +1,7 @@
-// Odisse · Biblioteca de blocos das landing pages (servicos.odisse.com.br)
+// Odisse · Biblioteca de módulos das landing pages (servicos.odisse.com.br)
+// ("módulo" aqui, para não confundir com o Bloco da interface do Universo; no código e nos dados ficou "bloco")
 //
-// A RAIZ de todas as landing pages. Cada tipo de bloco diz:
+// A RAIZ de todas as landing pages. Cada tipo de módulo diz:
 //   - os campos que o painel mostra (formulário simples, sem mexer na página);
 //   - o exemplo (para a Biblioteca de blocos e para o bloco novo);
 //   - o desenho (o HTML que o site monta, com as classes de assets/lp/blocos.css).
@@ -27,7 +28,7 @@ const lista = (id, rotulo, campos, extra = {}) => ({ id, tipo: 'lista', rotulo, 
 const ROTULO = t('rotulo', 'Rótulo acima do título', 40, { dica: 'Linha curta em maiúsculas, ex.: Como trabalhamos' });
 const TITULO = t('titulo', 'Título', 160);
 const TEXTO = a('texto', 'Texto', 900);
-const BOTOES = { id: 'botoes', tipo: 'chave', rotulo: 'Botões de contato no fim do bloco' };
+const BOTOES = { id: 'botoes', tipo: 'chave', rotulo: 'Botões de contato no fim do módulo' };
 
 export const CAMPOS_PAGINA = [
   t('slug', 'Endereço', 60, { dica: 'servicos.odisse.com.br/<endereço>/ — só letras minúsculas, números e hífen' }),
@@ -176,11 +177,11 @@ export const TIPOS = [
     },
   },
   {
-    id: 'projetos', nome: 'Projetos', grupo: 'Imagens', cta: true,
+    id: 'projetos', nome: 'Portfólio', grupo: 'Imagens', cta: true,
     desc: 'Grade de projetos em duas colunas: imagem com fitas, nome, lugar e área; etiqueta e síntese opcionais.',
     campos: [ROTULO, TITULO, TEXTO,
       lista('projetos', 'Projetos', [img('imagem', 'Imagem', 'paisagem'), t('nome', 'Nome', 120), t('local', 'Lugar', 60), t('area', 'Área', 30), t('tipo', 'Etiqueta sobre a imagem', 30), a('sintese', 'Síntese', 300)], { max: 8, rotuloItem: 'Projeto' }),
-      t('chamada', 'Texto do botão do formulário neste bloco', 40, { dica: 'Vazio = o texto da página' }), BOTOES],
+      t('chamada', 'Texto do botão do formulário neste módulo', 40, { dica: 'Vazio = o texto da página' }), BOTOES],
     exemplo: { rotulo: 'Projetos', titulo: 'Projetos que já ganharam forma', projetos: [{ nome: 'Residência YVC', local: 'João Pessoa, PB', area: '480 m²' }, { nome: 'Residência FAF', local: 'Bananeiras, PB', area: '240 m²' }], botoes: true },
     desenhar(d, ctx) {
       return `<section id="projetos"><div class="lp-moldura">${cabecalho(d)}
@@ -191,7 +192,7 @@ export const TIPOS = [
     },
   },
   {
-    id: 'escopo', nome: 'Escopo', grupo: 'Texto', cta: true,
+    id: 'escopo', nome: 'Itens inclusos', grupo: 'Texto', cta: true,
     desc: 'O que o cliente recebe: lista em duas colunas com marcadores e uma imagem em faixa embaixo.',
     campos: [ROTULO, TITULO, TEXTO, { id: 'itens', tipo: 'textos', rotulo: 'Itens', max: 12, maxItem: 200 }, img('imagem', 'Imagem em faixa', 'faixa', { dica: 'Proporção 3:1' }), BOTOES],
     exemplo: { rotulo: 'Escopo', titulo: 'O que você recebe', itens: ['Projeto do conceito à execução', 'Acompanhamento da aprovação', 'Compatibilização com complementares', 'Suporte técnico até a entrega'], botoes: false },
@@ -228,8 +229,8 @@ export const TIPOS = [
     },
   },
   {
-    id: 'autoria', nome: 'Autoria', grupo: 'Faixa escura', escuro: true,
-    desc: 'Na faixa ardósia: foto quadrada com fitas à esquerda, quem conduz os projetos à direita.',
+    id: 'autoria', nome: 'Autoria', grupo: 'Fundo ardósia', escuro: true,
+    desc: 'Sobre ardósia: foto quadrada com fitas à esquerda, quem conduz os projetos à direita.',
     campos: [img('imagem', 'Foto', 'quadrada'), ROTULO, TITULO, a('texto', 'Texto', 1800), t('nomes', 'Nomes', 120, { dica: 'Linha em maiúsculas sob o texto' })],
     exemplo: { rotulo: 'Autoria', titulo: 'Os Arquitetos', texto: 'Cid Clementino e Nathalia Linhares conduzem pessoalmente cada projeto.', nomes: 'CID CLEMENTINO · NATHALIA LINHARES' },
     desenhar(d, ctx) {
@@ -240,8 +241,8 @@ export const TIPOS = [
     },
   },
   {
-    id: 'numeros', nome: 'Números', grupo: 'Faixa escura', escuro: true,
-    desc: 'Na faixa ardósia: caixa areia com até quatro números grandes e a legenda de cada um.',
+    id: 'numeros', nome: 'Números', grupo: 'Fundo ardósia', escuro: true,
+    desc: 'Sobre ardósia: caixa areia com até quatro números grandes e a legenda de cada um.',
     campos: [lista('itens', 'Números', [t('valor', 'Número', 24), t('legenda', 'Legenda', 60)], { min: 1, max: 4, rotuloItem: 'Número' })],
     exemplo: { itens: [{ valor: '+100.000 m²', legenda: 'de arquitetura projetada' }, { valor: '+50 projetos', legenda: 'entregues' }, { valor: '5 anos', legenda: 'de atuação contínua' }] },
     desenhar(d) {
@@ -250,8 +251,8 @@ export const TIPOS = [
     },
   },
   {
-    id: 'chamada-final', nome: 'Chamada final', grupo: 'Faixa escura', escuro: true,
-    desc: 'Na faixa ardósia, centrada: rótulo, título, texto e os botões de contato.',
+    id: 'chamada-final', nome: 'Chamada final', grupo: 'Fundo ardósia', escuro: true,
+    desc: 'Sobre ardósia, centrada: rótulo, título, texto e os botões de contato.',
     campos: [ROTULO, TITULO, TEXTO, t('chamada', 'Texto do botão principal', 40, { dica: 'Vazio = o texto da página' })],
     exemplo: { rotulo: 'Comece agora', titulo: 'Vamos começar seu projeto?', texto: 'Preencha o formulário e retornaremos em até 1 dia útil.' },
     desenhar(d, ctx) {
@@ -261,7 +262,7 @@ export const TIPOS = [
 ];
 
 export const tipoDe = (id) => TIPOS.find((x) => x.id === id);
-export const GRUPOS = ['Topo', 'Texto', 'Imagens', 'Faixa escura'];
+export const GRUPOS = ['Topo', 'Texto', 'Imagens', 'Fundo ardósia'];
 
 // página nova: os blocos escolhidos, com os campos vazios (botões ligados onde o tipo os oferece)
 export function vazioDe(tipo) {

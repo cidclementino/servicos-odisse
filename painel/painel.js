@@ -6,9 +6,9 @@
 //   #/produto/<id>          Subpágina do produto, aba Ficha (situação, cartão no site, notas)
 //   #/produto/<id>/pagina   Subpágina do produto, aba Landing page (montador por blocos)
 //   #/inicio                Página inicial do site (mesmo montador)
-//   #/blocos                Biblioteca de blocos (os padrões de que toda landing page é feita)
+//   #/modulos               Biblioteca de módulos (os padrões de que toda landing page é feita)
 //
-// O montador não mexe na página: escolhem-se os blocos da biblioteca (assets/lp/blocos.js) e preenchem-se
+// O montador não mexe na página: escolhem-se os módulos da biblioteca (assets/lp/blocos.js) e preenchem-se
 // campos simples. O desenho é sempre o da biblioteca; mudou a biblioteca, mudaram todas as páginas.
 // Abre com a última cópia guardada neste navegador e confere a nuvem por baixo.
 
@@ -50,7 +50,11 @@ const IC = {
   fechar: svg('<path d="M3.5 3.5l7 7M10.5 3.5l-7 7"/>'),
   externo: svg('<path d="M8 2.5h3.5V6M11.5 2.5 6.5 7.5M10 8.5v3H2.5V4h3"/>'),
   ok: svg('<path d="M3 7.2 5.8 10 11 4"/>', 1.8),
+  alca: '<svg class="ic" viewBox="0 0 14 14" fill="currentColor" aria-hidden="true"><circle cx="5" cy="3.5" r="1.1"/><circle cx="9" cy="3.5" r="1.1"/><circle cx="5" cy="7" r="1.1"/><circle cx="9" cy="7" r="1.1"/><circle cx="5" cy="10.5" r="1.1"/><circle cx="9" cy="10.5" r="1.1"/></svg>',
+  mais: svg('<path d="M7 3v8M3 7h8"/>', 1.8),
 };
+// alça de arrastar (⋮⋮ em caixa): arrasta com o mouse; com o teclado, ↑ ↓ mudam a ordem
+const alca = (nome) => `<button type="button" class="caixa alca" data-alca aria-label="Arrastar ${esc(nome)} (setas para mudar a ordem)" title="Arraste para mudar a ordem">${IC.alca}</button>`;
 
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -187,7 +191,7 @@ function lerRota() {
   if (p[0] === 'produto' && p[1]) rota = { nome: 'produto', id: decodeURIComponent(p[1]), aba: p[2] === 'pagina' ? 'pagina' : 'ficha' };
   else if (p[0] === 'novo') rota = { nome: 'produto', id: null, aba: 'ficha' };
   else if (p[0] === 'inicio') rota = { nome: 'inicio' };
-  else if (p[0] === 'blocos') rota = { nome: 'blocos' };
+  else if (p[0] === 'modulos' || p[0] === 'blocos') rota = { nome: 'modulos' };
   else rota = { nome: 'catalogo' };
 }
 
@@ -206,12 +210,12 @@ addEventListener('hashchange', () => {
 
 function desenhar() {
   if (!catalogo) return;
-  const secao = rota.nome === 'inicio' ? 'inicio' : rota.nome === 'blocos' ? 'blocos' : 'catalogo';
+  const secao = rota.nome === 'inicio' ? 'inicio' : rota.nome === 'modulos' ? 'modulos' : 'catalogo';
   document.querySelectorAll('#secoes a').forEach((a) => a.classList.toggle('ativo', a.dataset.secao === secao));
   if (rota.nome === 'catalogo') desenharCatalogo();
   else if (rota.nome === 'produto') desenharProduto();
   else if (rota.nome === 'inicio') desenharInicio();
-  else if (rota.nome === 'blocos') desenharBiblioteca();
+  else if (rota.nome === 'modulos') desenharBiblioteca();
 }
 
 let avisoTimer;
@@ -297,7 +301,7 @@ function desenharCatalogo() {
       <div><h3 class="u-rotulo">Como o grid se forma</h3>
         <p>Entra no grid de serviços da página <a href="/inicio/" target="_blank" rel="noopener">/inicio/</a> todo produto <b>no ar</b>, marcado para aparecer no site, com título e link. A ordem do grid é a ordem desta lista (setas à direita de cada linha). O site lê o catálogo a cada visita, com até um minuto de atraso.</p></div>
       <div><h3 class="u-rotulo">Landing pages</h3>
-        <p>Abra o produto e vá em <b>Landing page</b> para montar a página dele com os blocos da biblioteca. As páginas guardam só os textos e as imagens; o desenho é o da <a href="#/blocos">biblioteca de blocos</a>, o mesmo em todas.</p></div>
+        <p>Abra o produto e vá em <b>Landing page</b> para montar a página dele com os módulos da biblioteca. As páginas guardam só os textos e as imagens; o desenho é o da <a href="#/modulos">biblioteca de módulos</a>, o mesmo em todas.</p></div>
       <div><h3 class="u-rotulo">Nada se apaga</h3>
         <p>Produto que saiu dos planos vai para <b>Arquivados</b>. Cada gravação do catálogo guarda o anterior (as 20 últimas versões ficam no servidor).</p></div>
     </section>`;
@@ -412,7 +416,7 @@ function campo(c, valor, caminho) {
   switch (c.tipo) {
     case 'texto':
     case 'link':
-      return `<label class="u-campo${c.tipo === 'link' ? ' link' : ''}"><span>${esc(c.rotulo)}${conta(c, valor)}</span><input type="text" ${at} value="${esc(valor)}" ${c.max ? `maxlength="${c.max}"` : ''} spellcheck="${c.tipo === 'texto'}">${dica}</label>`;
+      return `<label class="u-campo${c.tipo === 'link' ? ' link' : ''}${(c.max || 0) > 60 ? ' medio' : ''}"><span>${esc(c.rotulo)}${conta(c, valor)}</span><input type="text" ${at} value="${esc(valor)}" ${c.max ? `maxlength="${c.max}"` : ''} spellcheck="${c.tipo === 'texto'}">${dica}</label>`;
     case 'area':
       return `<label class="u-campo largo"><span>${esc(c.rotulo)}${conta(c, valor)}</span><textarea ${at} rows="${c.max > 700 ? 7 : c.max > 300 ? 4 : 3}" ${c.max ? `maxlength="${c.max}"` : ''}>${esc(valor)}</textarea>${dica || (c.max > 300 ? '<small>Linha em branco separa parágrafos.</small>' : '')}</label>`;
     case 'chave':
@@ -431,37 +435,40 @@ function campo(c, valor, caminho) {
     }
     case 'textos': {
       const itens = Array.isArray(valor) ? valor : [];
-      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span><div class="pilha-textos">
-        ${itens.map((x, i) => `<div class="pt-linha"><input type="text" data-c="${esc(caminho)}.${i}" value="${esc(x)}" maxlength="${c.maxItem || 200}" aria-label="${esc(c.rotulo)} ${i + 1}">
-          <span class="cmds"><button type="button" class="caixa" data-item="sobe" data-lista="${esc(caminho)}" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${IC.cima}</button><button type="button" class="caixa" data-item="desce" data-lista="${esc(caminho)}" data-i="${i}" ${i === itens.length - 1 ? 'disabled' : ''} aria-label="Descer">${IC.baixo}</button><button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar">${IC.fechar}</button></span></div>`).join('')}
-        ${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar item</button>` : ''}
-      </div></div>`;
+      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span><div class="pilha-textos" data-ordenavel="${esc(caminho)}">
+        ${itens.map((x, i) => `<div class="pt-linha" data-i="${i}">${alca(`${c.rotulo} ${i + 1}`)}<input type="text" data-c="${esc(caminho)}.${i}" value="${esc(x)}" maxlength="${c.maxItem || 200}" aria-label="${esc(c.rotulo)} ${i + 1}">
+          <button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar" title="Tirar">${IC.fechar}</button></div>`).join('')}
+      </div>${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar item</button>` : ''}</div>`;
     }
     case 'lista': {
       const itens = Array.isArray(valor) ? valor : [];
       const min = c.min || 0;
-      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span>${dica}<div class="pilha-itens">
-        ${itens.map((it, i) => `<div class="item">
-          <div class="item-cab"><span class="item-num">${i + 1}</span><b>${esc(c.rotuloItem || 'Item')}</b>
-            <span class="cmds"><button type="button" class="caixa" data-item="sobe" data-lista="${esc(caminho)}" data-i="${i}" ${i === 0 ? 'disabled' : ''} aria-label="Subir">${IC.cima}</button><button type="button" class="caixa" data-item="desce" data-lista="${esc(caminho)}" data-i="${i}" ${i === itens.length - 1 ? 'disabled' : ''} aria-label="Descer">${IC.baixo}</button>${itens.length > min ? `<button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar">${IC.fechar}</button>` : ''}</span></div>
+      // itens com só campos curtos viram linhas compactas; os outros, cartões em grade
+      const curtos = c.campos.every((s) => s.tipo === 'texto' && (s.max || 200) <= 60);
+      return `<div class="u-campo largo"><span>${esc(c.rotulo)}</span>${dica}<div class="pilha-itens${curtos ? ' curtos' : ''}" data-ordenavel="${esc(caminho)}">
+        ${itens.map((it, i) => `<div class="item" data-i="${i}">
+          <div class="item-cab">${alca(`${c.rotuloItem || 'Item'} ${i + 1}`)}<b>${esc(c.rotuloItem || 'Item')} ${i + 1}</b>
+            ${itens.length > min ? `<button type="button" class="caixa" data-item="tira" data-lista="${esc(caminho)}" data-i="${i}" aria-label="Tirar" title="Tirar">${IC.fechar}</button>` : ''}</div>
           <div class="item-campos">${c.campos.map((s) => campo(s, it?.[s.id], `${caminho}.${i}.${s.id}`)).join('')}</div>
         </div>`).join('')}
-        ${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar ${esc((c.rotuloItem || 'item').toLowerCase())}</button>` : ''}
-      </div></div>`;
+      </div>${itens.length < (c.max || 20) ? `<button type="button" class="acrescentar" data-item="mais" data-lista="${esc(caminho)}">+ Acrescentar ${esc((c.rotuloItem || 'item').toLowerCase())}</button>` : ''}</div>`;
     }
     default: return '';
   }
 }
 
-// miniatura de um bloco: a página de verdade, num quadro reduzido (sem clique)
-function miniatura(tipoId, dados) {
-  let html = desenharBloco({ tipo: tipoId, dados: dados || tipoDe(tipoId).exemplo }, { pagina: { formulario: '/formulario/', chamada: 'Quero Solicitar um Orçamento', whatsapp: true }, api: API, vazias: true });
+// miniatura de um módulo: o desenho de verdade, num quadro reduzido (sem clique)
+const PAGINA_EXEMPLO = { formulario: '/formulario/', chamada: 'Quero Solicitar um Orçamento', whatsapp: true };
+function docMini(tipoId, dados, pagina) {
+  let html = desenharBloco({ tipo: tipoId, dados: dados || tipoDe(tipoId).exemplo }, { pagina: pagina || PAGINA_EXEMPLO, api: API, vazias: true });
   if (tipoId === 'abertura-servicos') {
     const c = (t) => `<a class="lp-servico sem-imagem"><div class="lp-servico-veu"></div><div class="lp-servico-txt"><h3>${t}</h3><p>Texto curto do serviço.</p><span class="lp-servico-cta">Ver projeto →</span></div></a>`;
     html = html.replace('data-grid-servicos></div>', `data-grid-servicos style="--colunas:3">${c('Projeto Residencial')}${c('Interiores')}${c('Planejador da obra')}</div>`);
   }
-  const doc = `<!doctype html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="https://marca.odisse.com.br/v1/marca.css"><link rel="stylesheet" href="/assets/lp/blocos.css"><style>html,body{overflow:hidden;pointer-events:none}.lp-tela{min-height:900px}</style></head><body class="lp">${html}</body></html>`;
-  return `<div class="mini"><iframe tabindex="-1" aria-hidden="true" loading="lazy" srcdoc="${esc(doc)}"></iframe></div>`;
+  return `<!doctype html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="https://marca.odisse.com.br/v1/marca.css"><link rel="stylesheet" href="/assets/lp/blocos.css"><style>html,body{overflow:hidden;pointer-events:none}.lp-tela{min-height:900px}</style></head><body class="lp">${html}</body></html>`;
+}
+function miniatura(tipoId, dados, pagina) {
+  return `<div class="mini"><iframe tabindex="-1" aria-hidden="true" loading="lazy" srcdoc="${esc(docMini(tipoId, dados, pagina))}"></iframe></div>`;
 }
 const escalaMini = new ResizeObserver((es) => es.forEach((e) => e.target.style.setProperty('--escala', e.contentRect.width / 1440)));
 const ligarMinis = (el) => el.querySelectorAll('.mini').forEach((m) => escalaMini.observe(m));
@@ -546,7 +553,7 @@ function desenharFicha() {
 
   const pgBloco = p.id ? (pg
     ? `<div class="largo resumo-pagina"><span class="etq ${pg.publicada ? (pg.pendente ? 'atencao' : 'ok') : 'tracejada'}">${pg.publicada ? (pg.pendente ? 'mudanças não publicadas' : 'publicada') : 'rascunho'}</span>
-        <span>/${esc(pg.slug)}/ · ${pg.blocos} blocos</span></div>
+        <span>/${esc(pg.slug)}/ · ${pg.blocos} módulos</span></div>
        <a class="u-botao meia" href="#/produto/${encodeURIComponent(p.id)}/pagina">Abrir a landing page</a>`
     : `<p class="largo dica-texto">Este produto ainda não tem landing page.</p><a class="u-botao meia" href="#/produto/${encodeURIComponent(p.id)}/pagina">Montar landing page</a>`) : '';
 
@@ -648,20 +655,20 @@ function desenharCriacao() {
   const bases = paginas.filter((x) => x.id !== 'inicio');
   $('#acoesPagina').innerHTML = '';
   $('#montador').innerHTML = `
-    <div class="vazio grande">Este produto ainda não tem landing page. Escolha os blocos da biblioteca que vão compor a página e preencha os textos depois, bloco a bloco.</div>
+    <div class="vazio grande">Este produto ainda não tem landing page. Escolha os módulos da biblioteca que vão compor a página e preencha os textos depois, módulo a módulo.</div>
     <section class="secao">
       <h2 class="u-subtitulo">Montar landing page</h2>
       <div class="criar-linha">
         <label class="u-campo"><span>Endereço</span><div class="campo-endereco"><span>servicos.odisse.com.br/</span><input type="text" id="novoSlug" value="${esc(c.slug)}" maxlength="60" spellcheck="false"><span>/</span></div></label>
         <div class="grupo-campo"><span class="rotulo-campo">Começar com</span><div class="seletor" id="selBase" role="radiogroup">
-          <button type="button" role="radio" data-v="" aria-checked="${!c.base}">Blocos escolhidos, em branco</button>
+          <button type="button" role="radio" data-v="" aria-checked="${!c.base}">Módulos escolhidos, em branco</button>
           ${bases.map((b) => `<button type="button" role="radio" data-v="${esc(b.id)}" aria-checked="${c.base === b.id}">Cópia de /${esc(b.slug)}/</button>`).join('')}
         </div></div>
       </div>
       <div id="escolhaBlocos" ${c.base ? 'hidden' : ''}>
-        <div class="u-rotulo previa-rotulo">Blocos (<span id="nEscolha">${c.escolha.size}</span> escolhidos; a ordem pode mudar depois)</div>
+        <div class="u-rotulo previa-rotulo">Módulos (<span id="nEscolha">${c.escolha.size}</span> escolhidos; a ordem pode mudar depois)</div>
         ${vitrineTipos((t) => `<label class="tipo-cartao escolhivel${c.escolha.has(t.id) ? ' marcado' : ''}"><input type="checkbox" value="${t.id}" ${c.escolha.has(t.id) ? 'checked' : ''}>
-          ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}</span><span class="tipo-desc">${esc(t.desc)}</span></label>`, (t) => t.id !== 'abertura-servicos')}
+          ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">fundo ardósia</span>' : ''}</span><span class="tipo-desc">${esc(t.desc)}</span></label>`, (t) => t.id !== 'abertura-servicos')}
       </div>
       <div class="rodape-acoes"><button type="button" class="u-botao forte" id="btCriar">Criar landing page</button></div>
     </section>`;
@@ -705,7 +712,7 @@ async function criarPagina() {
   } else {
     const ordem = TIPOS.map((t) => t.id);
     const escolhidos = [...c.escolha].sort((a, b) => ordem.indexOf(a) - ordem.indexOf(b));
-    if (!escolhidos.length) { avisar('Escolha pelo menos um bloco.', 'erro'); return; }
+    if (!escolhidos.length) { avisar('Escolha pelo menos um módulo.', 'erro'); return; }
     pagina = { slug, titulo: `Odisse Arquitetos — ${p.publico.titulo || p.nome}`, descricao: p.publico.texto || '', formulario: '', chamada: 'Quero Solicitar um Orçamento', whatsapp: true, textoWhatsapp: 'Quero Falar no WhatsApp', blocos: escolhidos.map(novoBloco) };
   }
   ocupado(true, $('#btCriar'));
@@ -718,7 +725,7 @@ async function criarPagina() {
       ed.produto = catalogo.produtos.find((x) => x.id === p.id) || p;
     }
     abrirRegistro(d.registro, d.resumo);
-    avisar('Landing page criada como rascunho. Preencha os blocos e publique quando estiver pronta.', 'ok');
+    avisar('Landing page criada como rascunho. Preencha os módulos e publique quando estiver pronta.', 'ok');
   } catch (e) {
     avisar('Não consegui criar: ' + e.message, 'erro');
   } finally {
@@ -752,44 +759,86 @@ function resumoBloco(b) {
   return d.titulo || d.rotulo || (d.itens?.[0]?.valor ? d.itens.map((x) => x.valor).filter(Boolean).join(' · ') : '') || '';
 }
 
+// campos do módulo em colunas, como a ficha do Universo: os textos do cabeçalho numa coluna,
+// imagens e listas nas outras duas; sem imagens nem listas, três colunas (títulos · texto · o resto)
+const CAB_MODULO = ['rotulo', 'titulo', 'texto', 'nomes', 'nota', 'chamada', 'botoes'];
+function corpoModulo(t, b) {
+  const html = (c) => campo(c, b.dados[c.id], `b.${b.uid}.${c.id}`);
+  const col = (lista, classe = '') => `<div class="mod-col${classe}">${lista.map(html).join('')}</div>`;
+  const cab = t.campos.filter((c) => CAB_MODULO.includes(c.id));
+  const cont = t.campos.filter((c) => !CAB_MODULO.includes(c.id));
+  if (!cont.length) {
+    const c1 = cab.filter((c) => c.id === 'rotulo' || c.id === 'titulo');
+    const c2 = cab.filter((c) => c.id === 'texto');
+    const c3 = cab.filter((c) => !c1.includes(c) && !c2.includes(c));
+    return `<div class="mod-tres">${col(c1)}${col(c2)}${col(c3)}</div>`;
+  }
+  if (!cab.length) return `<div class="mod-tres">${col(cont, ' tripla')}</div>`;
+  return `<div class="mod-tres">${col(cab)}${col(cont, ' dupla')}</div>`;
+}
+
+const zonaInserir = (i) => `<div class="inserir" data-inserir="${i}"><button type="button" class="caixa" data-inserir-bt="${i}" aria-label="Acrescentar módulo aqui" title="Acrescentar módulo aqui">${IC.mais}</button></div>`;
+
+function modulo(b) {
+  const t = tipoDe(b.tipo);
+  const fechado = fechados[`b-${b.uid}`] !== false ? ' fechado' : '';
+  const aviso = t.topo && ed.rascunho.blocos[0] !== b ? '<div class="aviso">Módulo de topo: só aparece no site se for o primeiro da página.</div>' : '';
+  return `<section class="bloco modulo${fechado}${t.escuro ? ' escuro' : ''}" data-bloco="b-${b.uid}" data-uid="${b.uid}">
+    <div class="mod-cab">
+      ${alca(t.nome)}
+      <button type="button" class="mod-mini" data-alterna tabindex="-1" aria-hidden="true">${miniatura(t.id, b.dados, ed.rascunho)}</button>
+      <h3 class="bloco-h"><button type="button" class="bloco-alterna" aria-expanded="${!fechado}">${esc(t.nome)}<small>${esc(resumoBloco(b))}</small></button></h3>
+      ${t.escuro ? '<span class="etq">fundo ardósia</span>' : ''}
+      <button type="button" class="caixa" data-bloco-acao="tira" data-uid="${b.uid}" aria-label="Tirar módulo" title="Tirar módulo">${IC.fechar}</button>
+      <button type="button" class="caixa bloco-seta" data-alterna aria-label="Recolher ou abrir">${IC.baixo}</button>
+    </div>
+    <div class="bloco-corpo">${aviso}${corpoModulo(t, b)}</div>
+  </section>`;
+}
+
 function desenharEditor() {
   const pg = ed.rascunho;
   const r = resumoDe(ed.id);
   const camposPagina = CAMPOS_PAGINA.map((c) => {
     if (c.id === 'slug') {
-      return `<label class="u-campo largo"><span>${esc(c.rotulo)}</span><div class="campo-endereco"><span>servicos.odisse.com.br/</span><input type="text" data-c="p.slug" value="${esc(pg.slug)}" maxlength="60" spellcheck="false" ${ed.id === 'inicio' ? 'readonly' : ''}><span>/</span></div>
+      return `<label class="u-campo"><span>${esc(c.rotulo)}</span><div class="campo-endereco"><span>servicos.odisse.com.br/</span><input type="text" data-c="p.slug" value="${esc(pg.slug)}" maxlength="60" spellcheck="false" ${ed.id === 'inicio' ? 'readonly' : ''}><span>/</span></div>
         ${r && !r.casca && ed.id !== 'inicio' ? `<small>Endereço novo: até a casca ser criada no site, a página fica em <b>/lp/?p=${esc(pg.slug)}</b>.</small>` : ''}</label>`;
     }
     return campo(c, pg[c.id], `p.${c.id}`);
-  }).join('');
-
-  const pilha = pg.blocos.map((b, i) => {
-    const t = tipoDe(b.tipo);
-    const cmds = `<span class="cmds">
-      <button type="button" class="caixa" data-bloco-acao="sobe" data-uid="${b.uid}" ${i === 0 ? 'disabled' : ''} aria-label="Subir bloco">${IC.cima}</button>
-      <button type="button" class="caixa" data-bloco-acao="desce" data-uid="${b.uid}" ${i === pg.blocos.length - 1 ? 'disabled' : ''} aria-label="Descer bloco">${IC.baixo}</button>
-      <button type="button" class="caixa" data-bloco-acao="tira" data-uid="${b.uid}" aria-label="Tirar bloco">${IC.fechar}</button></span>`;
-    const aviso = t.topo && i > 0 ? '<div class="aviso">Bloco de topo: só aparece no site se for o primeiro da página.</div>' : '';
-    const titulo = `${esc(t.nome)}<small>${esc(resumoBloco(b))}</small>`;
-    return bloco(`b-${b.uid}`, titulo, `${aviso}<div class="grade">${t.campos.map((c) => campo(c, b.dados[c.id], `b.${b.uid}.${c.id}`)).join('')}</div>`,
-      { classe: `bloco-lp${t.escuro ? ' escuro' : ''}`, cabExtra: `<span class="pilha-num">${i + 1}</span>`, extra: `${t.escuro ? '<span class="etq">faixa escura</span>' : ''}${cmds}` });
-  }).join('');
+  });
+  const [slug, titulo, descricao, formulario, chamada, whatsapp, textoWhatsapp] = camposPagina;
+  const paginaCorpo = `<div class="mod-tres">
+    <div class="mod-col">${slug}${titulo}</div>
+    <div class="mod-col">${descricao}</div>
+    <div class="mod-col">${formulario}${chamada}${whatsapp}${textoWhatsapp}</div></div>`;
 
   $('#montador').innerHTML = `
-    ${bloco('pagina-geral', 'Página', `<div class="grade">${camposPagina}</div>`, { classe: 'bloco-pagina' })}
+    ${bloco('pagina-geral', 'Página', paginaCorpo, { classe: 'bloco-pagina' })}
     <section class="secao">
-      <div class="secao-cab"><h2 class="u-subtitulo">Blocos da página</h2><span class="u-apoio">${pg.blocos.length} blocos · os textos e as imagens ficam aqui; o desenho é o da <a href="#/blocos">biblioteca</a></span>
+      <div class="secao-cab"><h2 class="u-subtitulo">Módulos da página</h2><span class="u-apoio">${pg.blocos.length} módulos · os textos e as imagens ficam aqui; o desenho é o da <a href="#/modulos">biblioteca</a></span>
         <span class="secao-cmds"><button type="button" class="link-texto" data-todos="abrir">abrir todos</button> · <button type="button" class="link-texto" data-todos="fechar">recolher todos</button></span></div>
-      <div class="pilha-blocos">${pilha}</div>
-      <button type="button" class="acrescentar grande" id="btMaisBloco">+ Acrescentar bloco</button>
+      <div class="pilha-modulos" id="pilhaModulos">${zonaInserir(0)}${pg.blocos.map((b, i) => modulo(b) + zonaInserir(i + 1)).join('')}</div>
+      <button type="button" class="acrescentar grande" id="btMaisBloco">+ Acrescentar módulo</button>
     </section>
     <section class="secao notas">
-      <div><h3 class="u-rotulo">Como funciona</h3><p>Cada bloco é um padrão da biblioteca. Aqui se escolhem os blocos e a ordem e se preenchem os textos e as imagens; a página não é editada diretamente. <b>Salvar</b> guarda o rascunho; <b>Ver prévia</b> mostra o rascunho como vai sair; <b>Publicar</b> põe no ar.</p></div>
-      <div><h3 class="u-rotulo">Faixa escura</h3><p>Autoria, Números e Chamada final ficam na faixa ardósia. Blocos escuros vizinhos se juntam numa faixa só, emendada no rodapé.</p></div>
-      <div><h3 class="u-rotulo">Botões de contato</h3><p>O formulário e o WhatsApp vêm do Bloco <b>Página</b>. Sem formulário, o WhatsApp vira o botão principal. A conversão do Google Ads conta os cliques no WhatsApp de qualquer bloco.</p></div>
+      <div><h3 class="u-rotulo">Como funciona</h3><p>Cada módulo é um padrão da biblioteca. Aqui se escolhem os módulos e a ordem (arrastando pela alça) e se preenchem os textos e as imagens; a página não é editada diretamente. <b>Salvar</b> guarda o rascunho; <b>Ver prévia</b> mostra o rascunho como vai sair; <b>Publicar</b> põe no ar.</p></div>
+      <div><h3 class="u-rotulo">Fundo ardósia</h3><p>Autoria, Números e Chamada final ficam sobre ardósia. Módulos ardósia vizinhos se juntam numa faixa só, emendada no rodapé.</p></div>
+      <div><h3 class="u-rotulo">Botões de contato</h3><p>O formulário e o WhatsApp vêm do Bloco <b>Página</b>. Sem formulário, o WhatsApp vira o botão principal. A conversão do Google Ads conta os cliques no WhatsApp de qualquer módulo.</p></div>
     </section>`;
+  ligarMinis($('#montador'));
   desenharAcoes();
   marcarMudanca();
+}
+
+// a miniatura do módulo acompanha o que se digita (com uma pausa, para não redesenhar a cada tecla)
+const minisPendentes = new Map();
+function atualizarMini(uidB) {
+  clearTimeout(minisPendentes.get(uidB));
+  minisPendentes.set(uidB, setTimeout(() => {
+    const b = ed?.rascunho?.blocos.find((x) => x.uid === uidB);
+    const fr = document.querySelector(`[data-bloco="b-${uidB}"] .mod-mini iframe`);
+    if (b && fr) fr.srcdoc = docMini(b.tipo, b.dados, ed.rascunho);
+  }, 500));
 }
 
 async function salvarPagina() {
@@ -798,7 +847,7 @@ async function salvarPagina() {
   ocupado(true);
   try {
     const d = await api(`/api/admin/paginas/${encodeURIComponent(ed.id)}`, { method: 'PUT', body: JSON.stringify({ versao: ed.registro.versao, pagina: pg }) });
-    const aberto = [...document.querySelectorAll('.bloco-lp:not(.fechado)')].map((b) => b.dataset.bloco);
+    const aberto = [...document.querySelectorAll('.modulo:not(.fechado)')].map((b) => b.dataset.bloco);
     const y = scrollY;
     abrirRegistro(d.registro, d.resumo);
     aberto.forEach((id) => { const b = document.querySelector(`[data-bloco="${CSS.escape(id)}"]`); if (b?.classList.contains('fechado')) alternarBloco(b); });
@@ -831,32 +880,33 @@ async function publicar() {
   }
 }
 
-function abrirEscolhaBloco() {
+function abrirEscolhaBloco(posicao = null) {
+  ed.inserirEm = posicao;
   const temTopo = ed.rascunho.blocos.some((b) => tipoDe(b.tipo).topo);
   $('#dlgBlocosCorpo').innerHTML = vitrineTipos((t) => {
     const bloqueado = t.topo && temTopo;
     return `<button type="button" class="tipo-cartao${bloqueado ? ' bloqueado' : ''}" data-novo-bloco="${t.id}" ${bloqueado ? 'disabled' : ''}>
-      ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}</span>
-      <span class="tipo-desc">${bloqueado ? 'A página já tem um bloco de topo.' : esc(t.desc)}</span></button>`;
+      ${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">fundo ardósia</span>' : ''}</span>
+      <span class="tipo-desc">${bloqueado ? 'A página já tem um módulo de topo.' : esc(t.desc)}</span></button>`;
   }, (t) => ed.id === 'inicio' || t.id !== 'abertura-servicos');
   ligarMinis($('#dlgBlocosCorpo'));
   $('#dlgBlocos').showModal();
 }
 
-// ================================================================ BIBLIOTECA DE BLOCOS
+// ================================================================ BIBLIOTECA DE MÓDULOS
 
 function desenharBiblioteca() {
-  document.title = 'Odisse · Biblioteca de blocos';
+  document.title = 'Odisse · Biblioteca de módulos';
   $('#pagina').innerHTML = `
-    <div class="cabecalho"><h1 class="u-titulo">Biblioteca de blocos</h1><div class="cab-acoes"><span class="u-apoio">${TIPOS.length} blocos</span></div></div>
+    <div class="cabecalho"><h1 class="u-titulo">Biblioteca de módulos</h1><div class="cab-acoes"><span class="u-apoio">${TIPOS.length} módulos</span></div></div>
     <div class="aviso" id="avisoGeral" hidden></div>
-    ${vitrineTipos((t) => `<div class="tipo-cartao estatico">${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">faixa escura</span>' : ''}${t.topo ? ' <span class="etq pessego">topo</span>' : ''}</span>
+    ${vitrineTipos((t) => `<div class="tipo-cartao estatico">${miniatura(t.id)}<span class="tipo-nome">${esc(t.nome)}${t.escuro ? ' <span class="etq">fundo ardósia</span>' : ''}${t.topo ? ' <span class="etq pessego">topo</span>' : ''}</span>
       <span class="tipo-desc">${esc(t.desc)}</span>
       <span class="tipo-campos">${t.campos.map((c) => esc(c.rotulo)).join(' · ')}</span></div>`)}
     <section class="secao notas">
-      <div><h3 class="u-rotulo">A raiz das páginas</h3><p>Toda landing page do servicos é uma lista destes blocos com os seus textos e imagens. O desenho de cada bloco mora num lugar só (<b>assets/lp/blocos.js</b> e <b>blocos.css</b> no repositório servicos-odisse): mudou ali, mudaram todas as páginas na mesma hora.</p></div>
+      <div><h3 class="u-rotulo">A raiz das páginas</h3><p>Toda landing page do servicos é uma lista destes módulos com os seus textos e imagens. O desenho de cada módulo mora num lugar só (<b>assets/lp/blocos.js</b> e <b>blocos.css</b> no repositório servicos-odisse): mudou ali, mudaram todas as páginas na mesma hora.</p></div>
       <div><h3 class="u-rotulo">Marca</h3><p>Núcleo Arquitetos: fundo papel, painel areia, véu ardósia, selo Roda; Inter; tinta ardósia. Ocre só nos números grandes e nos marcadores. Os seis pontos laterais acompanham a tela, como no odisse.com.br.</p></div>
-      <div><h3 class="u-rotulo">Bloco novo</h3><p>Um padrão novo (ex.: depoimentos, tabela de preços) entra na biblioteca a pedido, com os campos e o desenho, e fica disponível para todas as páginas.</p></div>
+      <div><h3 class="u-rotulo">Módulo novo</h3><p>Um padrão novo (ex.: depoimentos, tabela de preços) entra na biblioteca a pedido, com os campos e o desenho, e fica disponível para todas as páginas.</p></div>
     </section>`;
   ligarMinis($('#pagina'));
 }
@@ -935,12 +985,14 @@ function ligar() {
       if (c === 'pr.nome') { $('#tituloPagina').textContent = v || 'Produto novo'; $('#trilhaNome').textContent = v || 'Produto novo'; }
       if (c.startsWith('pr.publico.')) $('#previaCartao').innerHTML = cartaoSite(ed.rascunho.publico);
     } else {
-      const bl = el.closest('.bloco-lp');
-      if (bl && /\.(titulo|rotulo)$/.test(c)) {
-        const uidB = bl.dataset.bloco.slice(2);
-        const b = ed.rascunho.blocos.find((x) => x.uid === uidB);
+      const bl = el.closest('.modulo');
+      if (bl) {
+        const b = ed.rascunho.blocos.find((x) => x.uid === bl.dataset.uid);
         const sm = bl.querySelector('.bloco-alterna small');
         if (b && sm) sm.textContent = resumoBloco(b);
+        atualizarMini(bl.dataset.uid);
+      } else if (/^p\.(formulario|chamada|whatsapp|textoWhatsapp)$/.test(c)) {
+        ed.rascunho.blocos.forEach((b) => atualizarMini(b.uid));
       }
     }
     marcarMudanca();
@@ -953,7 +1005,7 @@ function ligar() {
     const todos = e.target.closest('[data-todos]');
     if (todos) {
       const fechar = todos.dataset.todos === 'fechar';
-      document.querySelectorAll('.bloco-lp').forEach((b) => { if (b.classList.contains('fechado') !== fechar) alternarBloco(b); });
+      document.querySelectorAll('.modulo').forEach((b) => { if (b.classList.contains('fechado') !== fechar) alternarBloco(b); });
       return;
     }
     if (!ed) return;
@@ -984,8 +1036,6 @@ function ligar() {
       const lista = lerCaminho(caminho);
       if (!Array.isArray(lista)) return;
       const i = Number(it.dataset.i);
-      if (it.dataset.item === 'sobe') moverEm(lista, i, -1);
-      if (it.dataset.item === 'desce') moverEm(lista, i, 1);
       if (it.dataset.item === 'tira') lista.splice(i, 1);
       if (it.dataset.item === 'mais') {
         const [, uidB, campoId] = caminho.split('.');
@@ -1000,22 +1050,98 @@ function ligar() {
       }
       return;
     }
-    // blocos da página (↑ ↓ ×)
+    // tirar módulo
     const ba = e.target.closest('[data-bloco-acao]');
     if (ba) {
       const lista = ed.rascunho.blocos;
       const i = lista.findIndex((b) => b.uid === ba.dataset.uid);
       if (ba.dataset.blocoAcao === 'tira') {
-        if (!confirm(`Tirar o bloco “${tipoDe(lista[i].tipo).nome}” desta página? (Só some de vez ao salvar.)`)) return;
+        if (!confirm(`Tirar o módulo “${tipoDe(lista[i].tipo).nome}” desta página? (Só some de vez ao salvar.)`)) return;
         lista.splice(i, 1);
-      } else moverEm(lista, i, ba.dataset.blocoAcao === 'sobe' ? -1 : 1);
+      }
       redesenharMantendo();
       return;
     }
-    if (e.target.closest('#btMaisBloco')) abrirEscolhaBloco();
+    if (e.target.closest('#btMaisBloco')) { abrirEscolhaBloco(null); return; }
+    const ins = e.target.closest('[data-inserir-bt]');
+    if (ins) abrirEscolhaBloco(Number(ins.dataset.inserirBt));
   });
 
-  // escolher bloco novo
+  // arrastar pela alça (módulos da página, itens das listas, linhas de texto); teclado: ↑ ↓ na alça
+  pag.addEventListener('pointerdown', (e) => {
+    const h = e.target.closest('[data-alca]');
+    if (!h || e.button !== 0 || !ed?.rascunho) return;
+    const el = h.closest('.modulo, [data-ordenavel] > [data-i]');
+    if (!el) return;
+    e.preventDefault();
+    const cont = el.parentElement;
+    const doModulo = el.classList.contains('modulo');
+    const irmaos = () => [...cont.children].filter((x) => x !== el && (doModulo ? x.classList.contains('modulo') : x.hasAttribute('data-i')));
+    const vertical = doModulo || getComputedStyle(cont).display !== 'grid' || getComputedStyle(cont).gridTemplateColumns.split(' ').length < 2;
+    const ordemAntes = [...cont.children].filter((x) => x === el || irmaos().includes(x)).map((x) => x.dataset.uid || x.dataset.i).join();
+    el.classList.add('arrastado');
+    cont.classList.add('arrastando');
+    document.body.classList.add('sem-selecao');
+    let rolar = 0;
+    const passo = () => { if (rolar) { scrollBy(0, rolar); requestAnimationFrame(passo); } };
+    const mover = (ev) => {
+      const depois = irmaos().find((x) => {
+        const r = x.getBoundingClientRect();
+        return vertical ? ev.clientY < r.top + r.height / 2 : ev.clientY < r.top || (ev.clientY <= r.bottom && ev.clientX < r.left + r.width / 2);
+      });
+      if (depois) { if (el.nextElementSibling !== depois) cont.insertBefore(el, depois); }
+      else { const ult = irmaos().pop(); if (ult && ult.nextElementSibling !== el) ult.after(el); }
+      const antes = rolar;
+      rolar = ev.clientY < 70 ? -14 : ev.clientY > innerHeight - 70 ? 14 : 0;
+      if (rolar && !antes) requestAnimationFrame(passo);
+    };
+    const soltar = () => {
+      rolar = 0;
+      removeEventListener('pointermove', mover);
+      removeEventListener('pointerup', soltar);
+      removeEventListener('pointercancel', soltar);
+      el.classList.remove('arrastado');
+      cont.classList.remove('arrastando');
+      document.body.classList.remove('sem-selecao');
+      const nova = [...cont.children].filter((x) => x === el || irmaos().includes(x));
+      if (nova.map((x) => x.dataset.uid || x.dataset.i).join() === ordemAntes) return;
+      if (doModulo) {
+        const porUid = new Map(ed.rascunho.blocos.map((b) => [b.uid, b]));
+        ed.rascunho.blocos = nova.map((x) => porUid.get(x.dataset.uid));
+      } else {
+        const lista = lerCaminho(cont.dataset.ordenavel);
+        const velha = lista.slice();
+        lista.splice(0, lista.length, ...nova.map((x) => velha[Number(x.dataset.i)]));
+      }
+      redesenharMantendo();
+    };
+    // na janela, não na alça: mover o cartão no DOM solta a captura do ponteiro
+    addEventListener('pointermove', mover);
+    addEventListener('pointerup', soltar);
+    addEventListener('pointercancel', soltar);
+  });
+  pag.addEventListener('keydown', (e) => {
+    const h = e.target.closest('[data-alca]');
+    if (!h || !ed?.rascunho || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+    e.preventDefault();
+    const passo = e.key === 'ArrowUp' ? -1 : 1;
+    const mod = h.closest('.modulo');
+    const item = h.closest('[data-ordenavel] > [data-i]');
+    if (item) {
+      const caminho = item.parentElement.dataset.ordenavel;
+      const i = Number(item.dataset.i);
+      moverEm(lerCaminho(caminho), i, passo);
+      redesenharMantendo();
+      document.querySelectorAll(`[data-ordenavel="${CSS.escape(caminho)}"] > [data-i="${i + passo}"] [data-alca]`)[0]?.focus();
+    } else if (mod) {
+      const lista = ed.rascunho.blocos;
+      moverEm(lista, lista.findIndex((b) => b.uid === mod.dataset.uid), passo);
+      redesenharMantendo();
+      document.querySelector(`.modulo[data-uid="${mod.dataset.uid}"] [data-alca]`)?.focus();
+    }
+  });
+
+  // escolher módulo novo
   const dlg = $('#dlgBlocos');
   dlg.querySelector('[data-fechar]').innerHTML = IC.fechar;
   dlg.addEventListener('click', (e) => {
@@ -1023,7 +1149,10 @@ function ligar() {
     const n = e.target.closest('[data-novo-bloco]');
     if (!n || !ed?.rascunho) return;
     const b = novoBloco(n.dataset.novoBloco);
-    if (tipoDe(b.tipo).topo) ed.rascunho.blocos.unshift(b); else ed.rascunho.blocos.push(b);
+    const lista = ed.rascunho.blocos;
+    if (tipoDe(b.tipo).topo) lista.unshift(b);
+    else if (Number.isInteger(ed.inserirEm)) lista.splice(Math.max(ed.inserirEm, lista[0] && tipoDe(lista[0].tipo).topo ? 1 : 0), 0, b);
+    else lista.push(b);
     dlg.close();
     desenharEditor();
     const el = document.querySelector(`[data-bloco="b-${b.uid}"]`);
